@@ -1,0 +1,36 @@
+name: Test package
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test-code:
+    runs-on: ubuntu-22.04
+    container: ghcr.io/fenics/dolfinx/dolfinx:v0.8.0
+    env:
+      DEB_PYTHON_INSTALL_LAYOUT: deb_system
+
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install package
+        run: python3 -m pip install .[test]
+
+      - name: Run tests
+        run: python3 -m pytest -v
+
+      - name: Extract Coverage
+        run: |
+          python3 -m coverage report | sed 's/^/    /' >> $GITHUB_STEP_SUMMARY
+          python3 -m coverage json
+          export TOTAL=$(python3 -c "import json;print(json.load(open('coverage.json'))['totals']['percent_covered_display'])")
+          echo "total=$TOTAL" >> $GITHUB_ENV
+
+      - name: Upload HTML report.
+        uses: actions/upload-artifact@v4
+        with:
+          name: html-report
+          path: htmlcov
