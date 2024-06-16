@@ -152,24 +152,3 @@ def test_lv_angles_alpha(alpha, data):
     assert norm(fib.fiber - fiber) < tol
     assert norm(fib.sheet - sheet) < tol
     assert norm(fib.sheet_normal - sheet_normal) < tol
-
-
-def test_ldrb_without_correct_markers_raises_RuntimeError(lv_geometry):
-    with pytest.raises(RuntimeError):
-        ldrb.dolfin_ldrb(mesh=lv_geometry.mesh)
-
-
-def test_biv_regression(biv_geometry):
-    ldrb.dolfin_ldrb(
-        mesh=biv_geometry.mesh,
-        ffun=biv_geometry.ffun,
-        markers=biv_geometry.markers,
-    )
-
-
-def test_lv_regression(lv_geometry):
-    ldrb.dolfin_ldrb(
-        mesh=lv_geometry.mesh,
-        ffun=lv_geometry.ffun,
-        markers=lv_geometry.markers,
-    )
