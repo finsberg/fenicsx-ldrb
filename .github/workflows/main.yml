@@ -19,8 +19,13 @@ jobs:
       - name: Install package
         run: python3 -m pip install .[test]
 
-      - name: Run tests
+      - name: Run tests wit numba disabled
         run: python3 -m pytest -v
+
+      - name: Run tests
+        env:
+          NUMBA_DISABLE_JIT: 1
+        run: python3 -m pytest  --cov=ldrb --cov-report=html --cov-report=term-missing -v
 
       - name: Extract Coverage
         run: |
