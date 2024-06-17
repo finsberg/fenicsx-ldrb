@@ -1,9 +1,9 @@
-# import cardiac_geometriesx
 from mpi4py import MPI
 
 import dolfinx
 import ldrb
 import numpy as np
+import pytest
 from dolfinx.geometry import bb_tree, compute_colliding_cells, compute_collisions_points
 
 tol = 1e-12
@@ -84,32 +84,21 @@ def test_apex_to_base(lv_geometry):
     assert np.isclose(evaluate(apex, x_apex), 0.0)
 
 
-# def test_ldrb_without_correct_markers_raises_RuntimeError(lv_geometry):
-#     with pytest.raises(RuntimeError):
-#         ldrb.dolfin_ldrb(mesh=lv_geometry.mesh)
-
-
-# def test_biv_regression(biv_geometry):
-#     ldrb.dolfin_ldrb(
-#         mesh=biv_geometry.mesh,
-#         ffun=biv_geometry.ffun,
-#         markers=biv_geometry.markers,
-#     )
-
-
-def test_lv_regression(lv_geometry):
+@pytest.mark.parametrize("fiber_space", ["P_1", "P_2", "dP_0", "dP_1", "Q_1", "Q_2"])
+def test_lv_regression(lv_geometry, fiber_space):
     ldrb.dolfinx_ldrb(
         mesh=lv_geometry.mesh,
         ffun=lv_geometry.ffun,
         markers=lv_geometry.markers,
-        fiber_space="P_2",
+        fiber_space=fiber_space,
     )
 
 
-def test_biv_regression(biv_geometry):
+@pytest.mark.parametrize("fiber_space", ["P_1", "P_2", "dP_0", "dP_1", "Q_1", "Q_2"])
+def test_biv_regression(biv_geometry, fiber_space):
     ldrb.dolfinx_ldrb(
         mesh=biv_geometry.mesh,
         ffun=biv_geometry.ffun,
         markers=biv_geometry.markers,
-        fiber_space="P_1",
+        fiber_space=fiber_space,
     )

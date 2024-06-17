@@ -197,7 +197,7 @@ def dolfinx_ldrb(
     fiber_space: str = "CG_1",
     ffun: dolfinx.mesh.MeshTags | None = None,
     markers: dict[str, int | list[int]] | None = None,
-    save_markers: bool = False,
+    save_markers: bool = True,
     alpha_endo_lv: float = 40,
     alpha_epi_lv: float = -50,
     alpha_endo_rv: float | None = None,
@@ -322,6 +322,9 @@ def dolfinx_ldrb(
         markers_fun = dolfinx.fem.Function(Vv)
         markers_fun.x.array[:] = marker_scalar
 
+        # with dolfinx.io.VTXWriter(mesh.comm, "markers.bp", [markers_fun], engine="BP4") as vtx:
+        #     vtx.write(0.0)
+
     return fiber_system_to_dolfin(system, mesh, fiber_space)
 
 
@@ -340,8 +343,8 @@ def fiber_system_to_dolfin(
     f0.x.array[:] = system.fiber
     f0.name = "fiber"
 
-    with dolfinx.io.VTXWriter(mesh.comm, "biv_fiber.bp", [f0], engine="BP4") as vtx:
-        vtx.write(0.0)
+    # with dolfinx.io.VTXWriter(mesh.comm, "biv_fiber.bp", [f0], engine="BP4") as vtx:
+    #     vtx.write(0.0)
 
     s0 = dolfinx.fem.Function(Vv)
     s0.x.array[:] = system.sheet
@@ -476,7 +479,8 @@ def project_gradients(
         # Add scalar data
         if case != "apex":
             f = dolfinx.fem.Function(V)
-            f.interpolate(scalar_solution)
+            expr = dolfinx.fem.Expression(scalar_solution, V.element.interpolation_points())
+            f.interpolate(expr)
             data[case + "_scalar"] = f.x.array
 
     # Return data
@@ -550,7 +554,7 @@ def scalar_laplacians(
         endo_markers = markers[case]
         endo_facets = np.hstack([ffun.find(marker) for marker in endo_markers])
         endo_dofs = dolfinx.fem.locate_dofs_topological(V, 2, endo_facets)
-        endo_bc = dolfinx.fem.dirichletbc(zero, endo_dofs, V)
+        endo_bc = dolfinx.fem.dirichletbc(one, endo_dofs, V)
 
         epi_markers = []
         for what in cases:
@@ -558,7 +562,7 @@ def scalar_laplacians(
                 epi_markers.extend(markers[what])
         epi_facets = np.hstack([ffun.find(marker) for marker in epi_markers])
         epi_dofs = dolfinx.fem.locate_dofs_topological(V, 2, epi_facets)
-        epi_bc = dolfinx.fem.dirichletbc(one, epi_dofs, V)
+        epi_bc = dolfinx.fem.dirichletbc(zero, epi_dofs, V)
 
         bcs = [endo_bc, epi_bc]
 
@@ -576,12 +580,12 @@ def scalar_laplacians(
         endo_markers = markers["lv"]
         endo_facets = np.hstack([ffun.find(marker) for marker in endo_markers])
         endo_dofs = dolfinx.fem.locate_dofs_topological(V, 2, endo_facets)
-        endo_bc = dolfinx.fem.dirichletbc(zero, endo_dofs, V)
+        endo_bc = dolfinx.fem.dirichletbc(one, endo_dofs, V)
 
         epi_markers = markers["rv"]
         epi_facets = np.hstack([ffun.find(marker) for marker in epi_markers])
         epi_dofs = dolfinx.fem.locate_dofs_topological(V, 2, epi_facets)
-        epi_bc = dolfinx.fem.dirichletbc(one, epi_dofs, V)
+        epi_bc = dolfinx.fem.dirichletbc(zero, epi_dofs, V)
 
         bcs = [endo_bc, epi_bc]
 
@@ -591,9 +595,9 @@ def scalar_laplacians(
         uh = problem.solve()
         solutions["lv_rv"] = uh
 
-        with dolfinx.io.XDMFFile(MPI.COMM_WORLD, "lv_rv.xdmf", "w") as file:
-            file.write_mesh(mesh)
-            file.write_function(uh)
+        # with dolfinx.io.XDMFFile(MPI.COMM_WORLD, "lv_rv.xdmf", "w") as file:
+        #     file.write_mesh(mesh)
+        #     file.write_function(uh)
 
     return solutions
 

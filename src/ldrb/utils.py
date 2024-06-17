@@ -27,7 +27,7 @@ def parse_element(space_string: str, mesh: dolfinx.mesh.Mesh, dim: int) -> basix
         el = basix.ufl.element(family=basix.ElementFamily.P, discontinuous=True, **kwargs)
 
     elif family_str in ["Quadrature", "Q", "Quad"]:
-        el = basix.ufl.quadrature_element(**kwargs)
+        el = basix.ufl.quadrature_element(scheme="default", **kwargs)
     else:
         families = list(basix.ElementFamily.__members__.keys())
         msg = f"Unknown element family: {family_str}, available families: {families}"
