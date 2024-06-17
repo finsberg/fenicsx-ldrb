@@ -56,16 +56,16 @@ def test_scalar_laplacians():
     assert np.isclose(evaluate(solutions["apex"], np.array([0.0, 0.0, 0.0])), 1.0)
 
     # Check LV
-    assert np.isclose(evaluate(solutions["lv"], np.array([0.0, 0.0, 0.0])), 0.0)
+    assert np.isclose(evaluate(solutions["lv"], np.array([0.0, 0.0, 0.0])), 1.0)
     assert np.isclose(evaluate(solutions["lv"], np.array([0.5, 0.5, 0.5])), 0.5)
     assert np.isclose(evaluate(solutions["lv"], np.array([0.5, 0.1, 0.1])), 0.5)
-    assert np.isclose(evaluate(solutions["lv"], np.array([1.0, 1.0, 1.0])), 1.0)
+    assert np.isclose(evaluate(solutions["lv"], np.array([1.0, 1.0, 1.0])), 0.0)
 
     # Check EPI (which should be opposite of LV)
-    assert np.isclose(evaluate(solutions["epi"], np.array([0.0, 0.0, 0.0])), 1.0)
+    assert np.isclose(evaluate(solutions["epi"], np.array([0.0, 0.0, 0.0])), 0.0)
     assert np.isclose(evaluate(solutions["epi"], np.array([0.5, 0.5, 0.5])), 0.5)
     assert np.isclose(evaluate(solutions["epi"], np.array([0.5, 0.1, 0.1])), 0.5)
-    assert np.isclose(evaluate(solutions["epi"], np.array([1.0, 1.0, 1.0])), 0.0)
+    assert np.isclose(evaluate(solutions["epi"], np.array([1.0, 1.0, 1.0])), 1.0)
 
 
 def test_apex_to_base(lv_geometry):
