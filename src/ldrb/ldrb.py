@@ -2,18 +2,17 @@ from __future__ import annotations
 
 import logging
 from collections import namedtuple
-from typing import Dict
-from typing import List
-
-import dolfinx
-import ufl
-from dolfinx.fem.petsc import LinearProblem
-
-# import dolfin as df
-import numpy as np
+from typing import Dict, List
 
 # from dolfin.mesh.meshfunction import MeshFunction
 from mpi4py import MPI
+
+import dolfinx
+
+# import dolfin as df
+import numpy as np
+import ufl
+from dolfinx.fem.petsc import LinearProblem
 
 from . import utils
 

@@ -1,13 +1,8 @@
 from importlib.metadata import metadata
 
-from . import calculus
-from . import ldrb
-
 # from . import save
-from . import utils
-from .ldrb import dolfinx_ldrb
-from .ldrb import project_gradients
-from .ldrb import scalar_laplacians
+from . import calculus, ldrb, utils
+from .ldrb import dolfinx_ldrb, project_gradients, scalar_laplacians
 from .utils import space_from_string
 
 meta = metadata("fenicsx-ldrb")

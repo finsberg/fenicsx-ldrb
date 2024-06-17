@@ -1,5 +1,5 @@
-import dolfinx
 import basix
+import dolfinx
 
 
 def default_markers() -> dict[str, list[int]]:
