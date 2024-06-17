@@ -1,8 +1,6 @@
+import ldrb
 import numpy as np
 import pytest
-
-import ldrb
-
 
 tol = 1e-12
 
