@@ -1,5 +1,9 @@
+from enum import Enum
+from typing import Iterable
+
 import basix
 import dolfinx
+import numpy as np
 
 
 def default_markers() -> dict[str, list[int]]:
@@ -54,3 +58,32 @@ def space_from_string(
     """
     el = parse_element(space_string, mesh, dim)
     return dolfinx.fem.functionspace(mesh, el)
+
+
+def element2array(el: basix.finite_element.FiniteElement) -> np.ndarray:
+    return np.array(
+        [int(el.family), int(el.cell_type), int(el.degree), int(el.discontinuous)],
+        dtype=np.uint8,
+    )
+
+
+def number2Enum(num: int, enum: Iterable) -> Enum:
+    for e in enum:
+        if int(e) == num:
+            return e
+    raise ValueError(f"Invalid value {num} for enum {enum}")
+
+
+def array2element(arr: np.ndarray) -> basix.finite_element.FiniteElement:
+    family = number2Enum(arr[0], basix.ElementFamily)
+    cell_type = number2Enum(arr[1], basix.CellType)
+    degree = int(arr[2])
+    discontinuous = bool(arr[3])
+    # TODO: Shape is hardcoded to (3,) for now, but this should also be stored
+    return basix.ufl.element(
+        family=family,
+        cell=cell_type,
+        degree=degree,
+        discontinuous=discontinuous,
+        shape=(3,),
+    )

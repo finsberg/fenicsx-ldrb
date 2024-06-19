@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import logging
-from collections import namedtuple
-from typing import Dict, List
 
 # from dolfin.mesh.meshfunction import MeshFunction
 from mpi4py import MPI
@@ -14,10 +12,9 @@ import numpy as np
 import ufl
 from dolfinx.fem.petsc import LinearProblem
 
-from . import utils
+from . import io, utils
 
 logger = logging.getLogger(__name__)
-FiberSheetSystem = namedtuple("FiberSheetSystem", "fiber, sheet, sheet_normal")
 
 
 def standard_dofs(n: int) -> np.ndarray:
@@ -55,7 +52,7 @@ def compute_fiber_sheet_system(
     beta_epi_rv: float | None = None,
     beta_endo_sept: float | None = None,
     beta_epi_sept: float | None = None,
-) -> FiberSheetSystem:
+) -> io.FiberSheetSystem:
     """
     Compute the fiber-sheets system on all degrees of freedom.
     """
@@ -83,40 +80,26 @@ def compute_fiber_sheet_system(
     logger.info(
         (
             "alpha: "
-            "\n endo_lv: {endo_lv}"
-            "\n epi_lv: {epi_lv}"
-            "\n endo_septum: {endo_sept}"
-            "\n epi_septum: {epi_sept}"
-            "\n endo_rv: {endo_rv}"
-            "\n epi_rv: {epi_rv}"
+            f"\n endo_lv: {alpha_endo_lv}"
+            f"\n epi_lv: {alpha_epi_lv}"
+            f"\n endo_septum: {alpha_endo_sept}"
+            f"\n epi_septum: {alpha_epi_sept}"
+            f"\n endo_rv: {alpha_endo_rv}"
+            f"\n epi_rv: {alpha_epi_rv}"
             ""
-        ).format(
-            endo_lv=alpha_endo_lv,
-            epi_lv=alpha_epi_lv,
-            endo_sept=alpha_endo_sept,
-            epi_sept=alpha_epi_sept,
-            endo_rv=alpha_endo_rv,
-            epi_rv=alpha_epi_rv,
-        ),
+        )
     )
     logger.info(
         (
             "beta: "
-            "\n endo_lv: {endo_lv}"
-            "\n epi_lv: {epi_lv}"
-            "\n endo_septum: {endo_sept}"
-            "\n epi_septum: {epi_sept}"
-            "\n endo_rv: {endo_rv}"
-            "\n epi_rv: {epi_rv}"
+            f"\n endo_lv: {beta_endo_lv}"
+            f"\n epi_lv: {beta_epi_lv}"
+            f"\n endo_septum: {beta_endo_sept}"
+            f"\n epi_septum: {beta_epi_sept}"
+            f"\n endo_rv: {beta_endo_rv}"
+            f"\n epi_rv: {beta_epi_rv}"
             ""
-        ).format(
-            endo_lv=beta_endo_lv,
-            epi_lv=beta_epi_lv,
-            endo_sept=beta_endo_sept,
-            epi_sept=beta_epi_sept,
-            endo_rv=beta_endo_rv,
-            epi_rv=beta_epi_rv,
-        ),
+        )
     )
 
     f0 = np.zeros_like(lv_gradient)
@@ -160,7 +143,7 @@ def compute_fiber_sheet_system(
         beta_epi_sept,
     )
 
-    return FiberSheetSystem(fiber=f0, sheet=s0, sheet_normal=n0)
+    return io.FiberSheetSystem(fiber=f0, sheet=s0, sheet_normal=n0)
 
 
 def dofs_from_function_space(mesh: dolfinx.mesh.Mesh, fiber_space: str) -> np.ndarray:
@@ -196,8 +179,7 @@ def dolfinx_ldrb(
     mesh: dolfinx.mesh.Mesh,
     fiber_space: str = "CG_1",
     ffun: dolfinx.mesh.MeshTags | None = None,
-    markers: dict[str, int | list[int]] | None = None,
-    save_markers: bool = True,
+    markers: dict[str, list[int]] | dict[str, int] | None = None,
     alpha_endo_lv: float = 40,
     alpha_epi_lv: float = -50,
     alpha_endo_rv: float | None = None,
@@ -210,7 +192,7 @@ def dolfinx_ldrb(
     beta_epi_rv: float | None = None,
     beta_endo_sept: float | None = None,
     beta_epi_sept: float | None = None,
-) -> FiberSheetSystem:
+) -> io.LDRBOutput:
     r"""
     Create fiber, cross fibers and sheet directions
 
@@ -291,7 +273,7 @@ def dolfinx_ldrb(
 
     # Create gradients
     logger.info("\nCalculating gradients")
-    data = project_gradients(
+    data, output = project_gradients(
         mesh=mesh,
         fiber_space=fiber_space,
         scalar_solutions=scalar_solutions,
@@ -317,44 +299,30 @@ def dolfinx_ldrb(
         **data,
     )  # type:ignore
 
-    if save_markers:
-        Vv = utils.space_from_string(fiber_space, mesh, dim=1)
-        markers_fun = dolfinx.fem.Function(Vv)
-        markers_fun.x.array[:] = marker_scalar
+    V = utils.space_from_string(fiber_space, mesh, dim=1)
+    markers_fun = dolfinx.fem.Function(V)
+    markers_fun.x.array[:] = marker_scalar
 
-        # with dolfinx.io.VTXWriter(mesh.comm, "markers.bp", [markers_fun], engine="BP4") as vtx:
-        #     vtx.write(0.0)
-
-    return fiber_system_to_dolfin(system, mesh, fiber_space)
-
-
-def fiber_system_to_dolfin(
-    system: FiberSheetSystem,
-    mesh: dolfinx.mesh.Mesh,
-    fiber_space: str,
-) -> FiberSheetSystem:
-    """
-    Convert fiber-sheet system of numpy arrays to dolfin
-    functions.
-    """
     Vv = utils.space_from_string(fiber_space, mesh, dim=3)
+    f0 = array_to_function(Vv, system.fiber, "fiber")
+    s0 = array_to_function(Vv, system.sheet, "sheet")
+    n0 = array_to_function(Vv, system.sheet_normal, "sheet_normal")
+    return io.LDRBOutput(
+        fiber=f0,
+        sheet=s0,
+        sheet_normal=n0,
+        markers_scalar=markers_fun,
+        **output,
+    )
 
-    f0 = dolfinx.fem.Function(Vv)
-    f0.x.array[:] = system.fiber
-    f0.name = "fiber"
 
-    # with dolfinx.io.VTXWriter(mesh.comm, "biv_fiber.bp", [f0], engine="BP4") as vtx:
-    #     vtx.write(0.0)
-
-    s0 = dolfinx.fem.Function(Vv)
-    s0.x.array[:] = system.sheet
-    s0.name = "sheet"
-
-    n0 = dolfinx.fem.Function(Vv)
-    n0.x.array[:] = system.sheet_normal
-    n0.name = "sheet_normal"
-
-    return FiberSheetSystem(fiber=f0, sheet=s0, sheet_normal=n0)
+def array_to_function(
+    V: dolfinx.fem.FunctionSpace, array: np.ndarray, name
+) -> dolfinx.fem.Function:
+    f = dolfinx.fem.Function(V)
+    f.x.array[:] = array
+    f.name = name
+    return f
 
 
 def apex_to_base(
@@ -445,8 +413,8 @@ def apex_to_base(
 def project_gradients(
     mesh: dolfinx.mesh.Mesh,
     scalar_solutions: dict[str, dolfinx.fem.Function],
-    fiber_space: str = "CG_1",
-) -> dict[str, np.ndarray]:
+    fiber_space: str = "P_1",
+) -> tuple[dict[str, np.ndarray], dict[str, dolfinx.fem.Function]]:
     """
     Calculate the gradients using projections
 
@@ -464,8 +432,10 @@ def project_gradients(
     Vv = utils.space_from_string(fiber_space, mesh, dim=3)
     V = utils.space_from_string(fiber_space, mesh, dim=1)
 
+    output = {}
     data = {}
     for case, scalar_solution in scalar_solutions.items():
+        output[case] = scalar_solution
         if case != "lv_rv":
             grad_expr = dolfinx.fem.Expression(
                 ufl.grad(scalar_solution), Vv.element.interpolation_points()
@@ -475,6 +445,7 @@ def project_gradients(
 
             # Add gradient data
             data[case + "_gradient"] = f.x.array
+            output[case + "_gradient"] = f
 
         # Add scalar data
         if case != "apex":
@@ -482,16 +453,17 @@ def project_gradients(
             expr = dolfinx.fem.Expression(scalar_solution, V.element.interpolation_points())
             f.interpolate(expr)
             data[case + "_scalar"] = f.x.array
+            output[case + "_scalar"] = f
 
     # Return data
-    return data
+    return data, output
 
 
 def scalar_laplacians(
     mesh: dolfinx.mesh.Mesh,
     markers: dict[str, list[int]],
     ffun: dolfinx.mesh.MeshTags,
-) -> Dict[str, dolfinx.fem.Function]:
+) -> dict[str, dolfinx.fem.Function]:
     """
     Calculate the laplacians
 
@@ -603,12 +575,12 @@ def scalar_laplacians(
 
 
 def process_markers(
-    markers: dict[str, int | list[int]] | None,
+    markers: dict[str, list[int]] | dict[str, int] | None,
 ) -> dict[str, list[int]]:
     if markers is None:
         return utils.default_markers()
 
-    markers_to_lists: Dict[str, List[int]] = {}
+    markers_to_lists: dict[str, list[int]] = {}
     for name, values in markers.items():
         if not isinstance(values, list):
             markers_to_lists[name] = [values]
