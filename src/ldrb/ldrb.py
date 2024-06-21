@@ -175,6 +175,25 @@ def dofs_from_function_space(mesh: dolfinx.mesh.Mesh, fiber_space: str) -> np.nd
     return np.stack([x_dofs, y_dofs, z_dofs, scalar_dofs], -1)
 
 
+def transform_markers(markers: dict[str, list[int]]) -> dict[str, list[int]]:
+    """Convert markers generated with gmsh to format for ldrb"""
+    if "ENDO_LV" in markers:
+        return dict(
+            lv=[markers["ENDO_LV"][0]],
+            rv=[markers["ENDO_RV"][0]],
+            epi=[markers["EPI"][0]],
+            base=[markers["BASE"][0]],
+        )
+    elif "ENDO" in markers:
+        return dict(
+            lv=[markers["ENDO"][0]],
+            epi=[markers["EPI"][0]],
+            base=[markers["BASE"][0]],
+        )
+    else:
+        return markers
+
+
 def dolfinx_ldrb(
     mesh: dolfinx.mesh.Mesh,
     fiber_space: str = "CG_1",
@@ -262,7 +281,7 @@ def dolfinx_ldrb(
 
     """
     # Solve the Laplace-Dirichlet problem
-    processed_markers = process_markers(markers)
+    processed_markers = transform_markers(process_markers(markers))
 
     logger.info("Calculating scalar fields")
     scalar_solutions = scalar_laplacians(
