@@ -1,5 +1,5 @@
 <p align="center">
-  <img width="300" height="300" src="./docs/_static/fenicsx-ldrb-logo.png">
+  <img width="300" height="300" src="https://raw.githubusercontent.com/finsberg/fenicsx-ldrb/main/docs/_static/fenicsx-ldrb-logo.png">
 </p>
 
 
