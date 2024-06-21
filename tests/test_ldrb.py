@@ -94,7 +94,17 @@ def test_lv_regression(lv_geometry, fiber_space):
     )
 
 
-@pytest.mark.parametrize("fiber_space", ["P_1", "P_2", "dP_0", "dP_1", "Q_1", "Q_2"])
+@pytest.mark.parametrize(
+    "fiber_space",
+    [
+        "P_1",
+        "P_2",
+        "dP_0",
+        "dP_1",
+        "Q_1",
+        "Q_2",
+    ],
+)
 def test_biv_regression(biv_geometry, fiber_space):
     ldrb.dolfinx_ldrb(
         mesh=biv_geometry.mesh,

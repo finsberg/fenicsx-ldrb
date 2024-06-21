@@ -54,6 +54,8 @@ all = [
    "fenicsx-ldrb[demos]"
 ]
 
+[project.scripts]
+ldrb = "ldrb.cli:main"
 
 [tool.pytest.ini_options]
 testpaths = [
