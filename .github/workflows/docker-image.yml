@@ -13,7 +13,6 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  LAB_NAME: lab
 
 jobs:
   build-and-push-image:
@@ -53,20 +52,3 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta-base.outputs.tags }}
           labels: ${{ steps.meta-base.outputs.labels }}
-          target: beat_base
-
-      - name: Extract metadata (tags, labels) for lab images
-        id: meta-lab
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ env.LAB_NAME }}
-
-      - name: Build and push Docker lab image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: ${{ github.event_name == 'push' }}
-          platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta-lab.outputs.tags }}
-          labels: ${{ steps.meta-lab.outputs.labels }}
-          target: beat_lab
