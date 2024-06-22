@@ -85,11 +85,11 @@ def test_lv_angles_beta(beta, data):
         beta_epi_lv=beta,
         **data,
     )
-    fiber = np.array([0, 0, 1, 0, 0, 1, 0, 0, 1])
-    sheet = np.array(
+    f0 = np.array([0, 0, 1, 0, 0, 1, 0, 0, 1])
+    s0 = np.array(
         [np.sin(a), np.cos(a), 0, np.sin(a), np.cos(a), 0, np.sin(a), np.cos(a), 0],
     )
-    sheet_normal = np.array(
+    n0 = np.array(
         [
             -np.cos(a),
             np.sin(a),
@@ -103,10 +103,10 @@ def test_lv_angles_beta(beta, data):
         ],
     )
 
-    assert norm(fib.fiber - fiber) < tol
+    assert norm(fib.f0 - f0) < tol
 
-    assert norm(fib.sheet - sheet) < tol
-    assert norm(fib.sheet_normal - sheet_normal) < tol
+    assert norm(fib.s0 - s0) < tol
+    assert norm(fib.n0 - n0) < tol
 
 
 @pytest.mark.parametrize("alpha", (90, -90, 60, -60, 30, -30, 40, -40, 50, -50))
@@ -120,7 +120,7 @@ def test_lv_angles_alpha(alpha, data):
         **data,
     )
 
-    fiber = np.array(
+    f0 = np.array(
         [
             0,
             np.sin(a),
@@ -133,7 +133,7 @@ def test_lv_angles_alpha(alpha, data):
             np.cos(a),
         ],
     )
-    sheet = np.array(
+    s0 = np.array(
         [
             0,
             np.cos(a),
@@ -146,7 +146,7 @@ def test_lv_angles_alpha(alpha, data):
             np.sin(a),
         ],
     )
-    sheet_normal = np.array([-1, 0, 0, -1, 0, 0, -1, 0, 0])
-    assert norm(fib.fiber - fiber) < tol
-    assert norm(fib.sheet - sheet) < tol
-    assert norm(fib.sheet_normal - sheet_normal) < tol
+    n0 = np.array([-1, 0, 0, -1, 0, 0, -1, 0, 0])
+    assert norm(fib.f0 - f0) < tol
+    assert norm(fib.s0 - s0) < tol
+    assert norm(fib.n0 - n0) < tol
