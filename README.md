@@ -2,7 +2,12 @@
   <img width="300" height="300" src="https://raw.githubusercontent.com/finsberg/fenicsx-ldrb/main/docs/_static/fenicsx-ldrb-logo.png">
 </p>
 
-
+[![Create and publish a Docker image](https://github.com/finsberg/fenicsx-ldrb/actions/workflows/docker-image.yml/badge.svg)](https://github.com/finsberg/fenicsx-ldrb/actions/workflows/docker-image.yml)
+[![pre-commit](https://github.com/finsberg/fenicsx-ldrb/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/finsberg/fenicsx-ldrb/actions/workflows/pre-commit.yml)
+[![Test package](https://github.com/finsberg/fenicsx-ldrb/actions/workflows/main.yml/badge.svg)](https://github.com/finsberg/fenicsx-ldrb/actions/workflows/main.yml)
+[![PyPI version](https://badge.fury.io/py/fenicsx-ldrb.svg)](https://badge.fury.io/py/fenicsx-ldrb)
+![GitHub License](https://img.shields.io/github/license/finsberg/fenicsx-ldrb)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 # Laplace-Dirichlet Rule-Based (LDRB) algorithm for assigning myocardial fiber orientations
 
