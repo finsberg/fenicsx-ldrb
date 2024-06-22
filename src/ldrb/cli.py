@@ -126,7 +126,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     io.save(
         comm=geo.mesh.comm,
         filename=outdir / "microstructure.bp",
-        functions=[results.fiber, results.sheet, results.sheet_normal],
+        functions=[results.f0, results.s0, results.n0],
         overwrite=args["overwrite"],
     )
 
