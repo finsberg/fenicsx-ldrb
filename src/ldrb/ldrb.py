@@ -143,7 +143,7 @@ def compute_fiber_sheet_system(
         beta_epi_sept,
     )
 
-    return io.FiberSheetSystem(fiber=f0, sheet=s0, sheet_normal=n0)
+    return io.FiberSheetSystem(f0=f0, s0=s0, n0=n0)
 
 
 def dofs_from_function_space(mesh: dolfinx.mesh.Mesh, fiber_space: str) -> np.ndarray:
@@ -196,7 +196,7 @@ def transform_markers(markers: dict[str, list[int]]) -> dict[str, list[int]]:
 
 def dolfinx_ldrb(
     mesh: dolfinx.mesh.Mesh,
-    fiber_space: str = "CG_1",
+    fiber_space: str = "P_1",
     ffun: dolfinx.mesh.MeshTags | None = None,
     markers: dict[str, list[int]] | dict[str, int] | None = None,
     alpha_endo_lv: float = 40,
@@ -323,13 +323,13 @@ def dolfinx_ldrb(
     markers_fun.x.array[:] = marker_scalar
 
     Vv = utils.space_from_string(fiber_space, mesh, dim=3)
-    f0 = array_to_function(Vv, system.fiber, "fiber")
-    s0 = array_to_function(Vv, system.sheet, "sheet")
-    n0 = array_to_function(Vv, system.sheet_normal, "sheet_normal")
+    f0 = array_to_function(Vv, system.f0, "f0")
+    s0 = array_to_function(Vv, system.s0, "s0")
+    n0 = array_to_function(Vv, system.n0, "n0")
     return io.LDRBOutput(
-        fiber=f0,
-        sheet=s0,
-        sheet_normal=n0,
+        f0=f0,
+        s0=s0,
+        n0=n0,
         markers_scalar=markers_fun,
         **output,
     )

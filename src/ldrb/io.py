@@ -15,9 +15,9 @@ logger = logging.getLogger(__name__)
 
 
 class LDRBOutput(NamedTuple):
-    fiber: dolfinx.fem.Function
-    sheet: dolfinx.fem.Function
-    sheet_normal: dolfinx.fem.Function
+    f0: dolfinx.fem.Function
+    s0: dolfinx.fem.Function
+    n0: dolfinx.fem.Function
     lv: dolfinx.fem.Function | None = None
     rv: dolfinx.fem.Function | None = None
     epi: dolfinx.fem.Function | None = None
@@ -37,9 +37,9 @@ class LDRBOutput(NamedTuple):
 
 
 class FiberSheetSystem(NamedTuple):
-    fiber: np.ndarray
-    sheet: np.ndarray
-    sheet_normal: np.ndarray
+    f0: np.ndarray
+    s0: np.ndarray
+    n0: np.ndarray
 
 
 def save(
