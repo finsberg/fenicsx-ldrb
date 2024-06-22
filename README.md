@@ -1,6 +1,4 @@
-<p align="center">
-  <img width="300" height="300" src="https://raw.githubusercontent.com/finsberg/fenicsx-ldrb/main/docs/_static/fenicsx-ldrb-logo.png">
-</p>
+![_](https://raw.githubusercontent.com/finsberg/fenicsx-ldrb/main/docs/_static/fenicsx-ldrb-logo.png)
 
 [![Create and publish a Docker image](https://github.com/finsberg/fenicsx-ldrb/actions/workflows/docker-image.yml/badge.svg)](https://github.com/finsberg/fenicsx-ldrb/actions/workflows/docker-image.yml)
 [![pre-commit](https://github.com/finsberg/fenicsx-ldrb/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/finsberg/fenicsx-ldrb/actions/workflows/pre-commit.yml)

@@ -39,10 +39,10 @@ grid = pyvista.UnstructuredGrid(*vtk_mesh(geo.mesh, geo.mesh.topology.dim))
 
 # Create plotter
 plotter = pyvista.Plotter()
-plotter.add_mesh(grid, style="wireframe", color="k")
+plotter.add_mesh(grid, style="wireframe", color="r")
 plotter.add_mesh(glyphs)
 plotter.view_xy()
 if not pyvista.OFF_SCREEN:
     plotter.show()
 else:
-    fig_as_array = plotter.screenshot("glyphs.png")
+    fig_as_array = plotter.screenshot("fiber.png")
