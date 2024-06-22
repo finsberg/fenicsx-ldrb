@@ -44,6 +44,7 @@ demos = [
 docs = [
    "jupyter-book",
    "jupytext",
+   "pyvista[all]",
    "fenicsx-ldrb[demos]"
 ]
 all = [

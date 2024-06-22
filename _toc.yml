@@ -4,6 +4,9 @@
 format: jb-book
 root: README
 parts:
+  - caption: Demo
+    chapters:
+    - file: demo.py
   - caption: API documentation
     chapters:
     - file: CONTRIBUTING
