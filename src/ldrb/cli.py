@@ -21,7 +21,9 @@ class Geometry:
 
 def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="ldrb is a simple tool to manage bookmarks in the terminal"
+        description=(
+            "ldrb - Generate a microstructure for a given mesh and markers using the LDRB method."
+        )
     )
 
     parser.add_argument("mesh_file", type=Path, help="Path to mesh file")
