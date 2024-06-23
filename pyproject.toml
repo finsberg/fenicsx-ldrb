@@ -67,6 +67,7 @@ testpaths = [
 
 # Exclude a variety of commonly ignored directories.
 exclude = [
+    "demo.py",
     ".bzr",
     ".direnv",
     ".eggs",
