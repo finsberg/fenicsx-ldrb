@@ -2,12 +2,9 @@ from __future__ import annotations
 
 import logging
 
-# from dolfin.mesh.meshfunction import MeshFunction
 from mpi4py import MPI
 
 import dolfinx
-
-# import dolfin as df
 import numpy as np
 import ufl
 from dolfinx.fem.petsc import LinearProblem
@@ -198,7 +195,7 @@ def dolfinx_ldrb(
     mesh: dolfinx.mesh.Mesh,
     fiber_space: str = "P_1",
     ffun: dolfinx.mesh.MeshTags | None = None,
-    markers: dict[str, list[int]] | dict[str, int] | None = None,
+    markers: dict[str, list[int]] | dict[str, tuple[int, ...]] | dict[str, int] | None = None,
     alpha_endo_lv: float = 40,
     alpha_epi_lv: float = -50,
     alpha_endo_rv: float | None = None,
@@ -594,18 +591,23 @@ def scalar_laplacians(
 
 
 def process_markers(
-    markers: dict[str, list[int]] | dict[str, int] | None,
+    markers: dict[str, list[int]] | dict[str, int] | dict[str, tuple[int, ...]] | None,
 ) -> dict[str, list[int]]:
     if markers is None:
         return utils.default_markers()
 
     markers_to_lists: dict[str, list[int]] = {}
     for name, values in markers.items():
-        if not isinstance(values, list):
-            markers_to_lists[name] = [values]
+        if not hasattr(values, "__len__"):
+            try:
+                markers_to_lists[name] = [int(values)]
+            except ValueError as e:
+                raise ValueError(
+                    f"Expected an integer or a list of integers for {name}. Got {values}",
+                ) from e
         else:
-            assert isinstance(values, list)
-            markers_to_lists[name] = values
+            assert isinstance(values, (list, tuple))
+            markers_to_lists[name] = [int(value) for value in values]
 
     return markers_to_lists
 
