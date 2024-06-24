@@ -6,7 +6,6 @@ import ldrb
 import numpy as np
 import pyvista
 import dolfinx
-from dolfinx.plot import vtk_mesh
 import cardiac_geometries
 
 # We will use [`cardiac-geometries`](https://github.com/ComputationalPhysiology/cardiac-geometriesx) for generate an idealized BiV geometry and save the geometry to a folder called `biv`
@@ -16,8 +15,8 @@ geo = cardiac_geometries.mesh.biv_ellipsoid(outdir="biv")
 # Next we will use `pyvista` to plot the mesh
 
 pyvista.start_xvfb()
-topology, cell_types, geometry = vtk_mesh(geo.mesh, geo.mesh.topology.dim)
-grid = pyvista.UnstructuredGrid(topology, cell_types, geometry)
+vtk_mesh = dolfinx.plot.vtk_mesh(geo.mesh, geo.mesh.topology.dim)
+grid = pyvista.UnstructuredGrid(*vtk_mesh)
 plotter = pyvista.Plotter()
 plotter.add_mesh(grid, show_edges=True)
 plotter.view_xy()
@@ -38,9 +37,8 @@ print(geo.markers)
 #
 # Next lets plot the facet tags with pyvista.
 
-bmesh, _, _, _ = dolfinx.mesh.create_submesh(geo.mesh, 2, geo.ffun.indices)
-btopology, bcell_types, bgeometry = vtk_mesh(bmesh, bmesh.topology.dim)
-bgrid = pyvista.UnstructuredGrid(btopology, bcell_types, bgeometry)
+vtk_bmesh = dolfinx.plot.vtk_mesh(geo.mesh, geo.ffun.dim, geo.ffun.indices)
+bgrid = pyvista.UnstructuredGrid(*vtk_bmesh)
 bgrid.cell_data["Facet tags"] = geo.ffun.values
 bgrid.set_active_scalars("Facet tags")
 p = pyvista.Plotter(window_size=[800, 800])
@@ -48,7 +46,7 @@ p.add_mesh(bgrid, show_edges=True)
 if not pyvista.OFF_SCREEN:
     p.show()
 else:
-    figure = p.screenshot("subdomains_unstructured.png")
+    figure = p.screenshot("facet_tags.png")
 
 # Now let us generate fibers with 60/-60 fibers angles on the endo- and epicardium
 
@@ -69,15 +67,13 @@ system = ldrb.dolfinx_ldrb(
 # And let us plot the fibers with pyvista
 
 f0 = system.f0
-pyvista.start_xvfb()
-topology, cell_types, geometry = vtk_mesh(f0.function_space)
+topology, cell_types, geometry = dolfinx.plot.vtk_mesh(f0.function_space)
 values = np.zeros((geometry.shape[0], 3), dtype=np.float64)
 values[:, : len(f0)] = f0.x.array.real.reshape((geometry.shape[0], len(f0)))
 function_grid = pyvista.UnstructuredGrid(topology, cell_types, geometry)
 function_grid["u"] = values
 glyphs = function_grid.glyph(orient="u", factor=0.2)
-geo.mesh.topology.create_connectivity(geo.mesh.topology.dim, geo.mesh.topology.dim)
-grid = pyvista.UnstructuredGrid(*vtk_mesh(geo.mesh, geo.mesh.topology.dim))
+grid = pyvista.UnstructuredGrid(*vtk_mesh)
 plotter = pyvista.Plotter()
 plotter.add_mesh(grid, style="wireframe", color="r")
 plotter.add_mesh(glyphs)
