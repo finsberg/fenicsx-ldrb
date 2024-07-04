@@ -6,7 +6,7 @@ from .utils import space_from_string
 
 meta = metadata("fenicsx-ldrb")
 __version__ = meta["Version"]
-__author__ = meta["Author"]
+__author__ = meta["Author-email"]
 __license__ = meta["License"]
 __email__ = meta["Author-email"]
 __program_name__ = meta["Name"]
