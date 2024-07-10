@@ -372,6 +372,7 @@ def apex_to_base(
     L = v * dolfinx.fem.Constant(mesh, dolfinx.default_scalar_type(1.0)) * ufl.dx
 
     base_facets = np.hstack([ffun.find(marker) for marker in base_marker])
+    mesh.topology.create_connectivity(2, 3)
     base_dofs = dolfinx.fem.locate_dofs_topological(V, 2, base_facets)
     one = dolfinx.fem.Constant(mesh, dolfinx.default_scalar_type(1.0))
     base_bc = dolfinx.fem.dirichletbc(one, base_dofs, V)
@@ -381,9 +382,9 @@ def apex_to_base(
     problem = LinearProblem(a, L, bcs=bcs, petsc_options={"ksp_type": "preonly", "pc_type": "lu"})
     uh = problem.solve()
 
-    with dolfinx.io.XDMFFile(MPI.COMM_WORLD, "apex.xdmf", "w") as file:
-        file.write_mesh(mesh)
-        file.write_function(uh)
+    # with dolfinx.io.XDMFFile(MPI.COMM_WORLD, "apex.xdmf", "w") as file:
+    #     file.write_mesh(mesh)
+    #     file.write_function(uh)
 
     # Maybe we can use
     # uh.x.scatter_forward()
@@ -419,9 +420,9 @@ def apex_to_base(
     problem = LinearProblem(a, L, bcs=bcs, petsc_options={"ksp_type": "preonly", "pc_type": "lu"})
     apex = problem.solve()
 
-    with dolfinx.io.XDMFFile(MPI.COMM_WORLD, "apex_base.xdmf", "w") as file:
-        file.write_mesh(mesh)
-        file.write_function(apex)
+    # with dolfinx.io.XDMFFile(MPI.COMM_WORLD, "apex_base.xdmf", "w") as file:
+    #     file.write_mesh(mesh)
+    #     file.write_function(apex)
 
     return apex
 
@@ -560,9 +561,9 @@ def scalar_laplacians(
         uh = problem.solve()
         solutions[case] = uh
 
-        with dolfinx.io.XDMFFile(MPI.COMM_WORLD, f"{case}.xdmf", "w") as file:
-            file.write_mesh(mesh)
-            file.write_function(uh)
+        # with dolfinx.io.XDMFFile(MPI.COMM_WORLD, f"{case}.xdmf", "w") as file:
+        #     file.write_mesh(mesh)
+        #     file.write_function(uh)
 
     if "rv" in cases:
         endo_markers = markers["lv"]
