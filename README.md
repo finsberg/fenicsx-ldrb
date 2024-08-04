@@ -45,8 +45,8 @@ ldrb mesh.xdmf --markers-file markers.json --fiber-space P_2 --alpha-endo-lv 60 
 Note that if you don't specify a different angle for the RV or Septum, then the same angle as the LV will be used.
 
 ## Installation
-
 ## pip
+Note that you can install the package with `pip`, but then you need to install FEniCSx separatly, see [download](https://fenicsproject.org/download/)
 ```
 python3 -m pip install fenicsx-ldrb
 ```
