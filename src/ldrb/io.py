@@ -61,7 +61,7 @@ def save(
         name = f.name
         if i == 0:
             adios4dolfinx.write_mesh(mesh=f.function_space.mesh, filename=filename)
-        adios4dolfinx.write_function(u=f, filename=filename)
+        adios4dolfinx.write_function_on_input_mesh(u=f, filename=filename)
         attributes[name] = utils.element2array(f.ufl_element().basix_element)
 
     adios4dolfinx.write_attributes(
@@ -75,22 +75,24 @@ def save(
 def load(
     comm: MPI.Comm,
     filename: Path,
-) -> list[dolfinx.fem.Function]:
+    mesh: dolfinx.mesh.Mesh | None = None,
+) -> dict[str, dolfinx.fem.Function]:
     if not Path(filename).exists():
         raise FileNotFoundError(f"File {filename} does not exist")
 
-    mesh = adios4dolfinx.read_mesh(comm=comm, filename=filename)
+    if mesh is None:
+        mesh = adios4dolfinx.read_mesh(comm=comm, filename=filename)
 
     function_space = adios4dolfinx.read_attributes(
         comm=comm, filename=filename, name="function_space"
     )
     # Assume same function space for all functions
-    functions = []
+    functions = {}
     for key, value in function_space.items():
         element = utils.array2element(value)
         V = dolfinx.fem.functionspace(mesh, element)
         f = dolfinx.fem.Function(V, name=key)
         adios4dolfinx.read_function(u=f, filename=filename, name=key)
-        functions.append(f)
+        functions[key] = f
 
     return functions
