@@ -21,11 +21,11 @@ def test_save_load(tmp_path, space1, space2):
     functions = [u, v]
     filename = tmp_path / "test_save_load.bp"
     ldrb.io.save(comm=mesh.comm, filename=filename, functions=functions)
-    loaded_functions = ldrb.io.load(comm=mesh.comm, filename=filename)
+    loaded_functions = ldrb.io.load(comm=mesh.comm, filename=filename, mesh=mesh)
     assert len(loaded_functions) == 2
 
-    assert loaded_functions[0].name == "u"
-    assert loaded_functions[1].name == "v"
+    assert loaded_functions["u"].name == "u"
+    assert loaded_functions["v"].name == "v"
 
-    assert np.allclose(loaded_functions[0].x.array, u.x.array)
-    assert np.allclose(loaded_functions[1].x.array, v.x.array)
+    assert np.allclose(loaded_functions["u"].x.array, u.x.array)
+    assert np.allclose(loaded_functions["v"].x.array, v.x.array)
