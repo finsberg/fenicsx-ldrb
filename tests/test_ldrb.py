@@ -1,10 +1,11 @@
 from mpi4py import MPI
 
 import dolfinx
-import ldrb
 import numpy as np
 import pytest
 from dolfinx.geometry import bb_tree, compute_colliding_cells, compute_collisions_points
+
+import ldrb
 
 tol = 1e-12
 
