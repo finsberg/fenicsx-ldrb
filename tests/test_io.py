@@ -1,9 +1,10 @@
 from mpi4py import MPI
 
 import dolfinx
-import ldrb
 import numpy as np
 import pytest
+
+import ldrb
 
 
 @pytest.mark.parametrize("space1", ["P_1", "P_2", "dP_0", "dP_1"])
