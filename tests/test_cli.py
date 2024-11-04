@@ -1,7 +1,6 @@
+import cardiac_geometries
 import ldrb
 import ldrb.cli
-
-import cardiac_geometries
 
 
 def test_cli(tmp_path):
