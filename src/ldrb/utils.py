@@ -5,6 +5,8 @@ import basix
 import dolfinx
 import numpy as np
 
+QUADRATURE_FAMILY = 100
+
 
 def default_markers() -> dict[str, list[int]]:
     """
@@ -60,9 +62,24 @@ def space_from_string(
     return dolfinx.fem.functionspace(mesh, el)
 
 
-def element2array(el: basix.finite_element.FiniteElement) -> np.ndarray:
+def element2array(el: basix.ufl._BlockedElement) -> np.ndarray:
+    try:
+        el = el.basix_element
+        family = int(el.family)
+        cell_type = int(el.cell_type)
+        degree = int(el.degree)
+        discontinuous = int(el.discontinuous)
+
+    except NotImplementedError:
+        assert el.family_name == "quadrature"
+
+        family = QUADRATURE_FAMILY
+        cell_type = int(el.cell_type)
+        degree = int(el.degree)
+        discontinuous = int(el.discontinuous)
+
     return np.array(
-        [int(el.family), int(el.cell_type), int(el.degree), int(el.discontinuous)],
+        [family, cell_type, degree, discontinuous],
         dtype=np.uint8,
     )
 
@@ -75,15 +92,24 @@ def number2Enum(num: int, enum: Iterable) -> Enum:
 
 
 def array2element(arr: np.ndarray) -> basix.finite_element.FiniteElement:
-    family = number2Enum(arr[0], basix.ElementFamily)
     cell_type = number2Enum(arr[1], basix.CellType)
     degree = int(arr[2])
     discontinuous = bool(arr[3])
-    # TODO: Shape is hardcoded to (3,) for now, but this should also be stored
-    return basix.ufl.element(
-        family=family,
-        cell=cell_type,
-        degree=degree,
-        discontinuous=discontinuous,
-        shape=(3,),
-    )
+    if arr[0] == QUADRATURE_FAMILY:
+        return basix.ufl.quadrature_element(
+            scheme="default",
+            cell=cell_type,
+            degree=degree,
+            value_shape=(3,),
+        )
+    else:
+        family = number2Enum(arr[0], basix.ElementFamily)
+
+        # TODO: Shape is hardcoded to (3,) for now, but this should also be stored
+        return basix.ufl.element(
+            family=family,
+            cell=cell_type,
+            degree=degree,
+            discontinuous=discontinuous,
+            shape=(3,),
+        )
