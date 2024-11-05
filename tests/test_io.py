@@ -6,10 +6,9 @@ import numpy as np
 import pytest
 
 
-@pytest.mark.parametrize("space1", ["P_1", "P_2", "dP_0", "dP_1"])
-@pytest.mark.parametrize("space2", ["P_1", "P_2", "dP_0", "dP_1"])
+@pytest.mark.parametrize("space1", ["P_1", "P_2", "dP_0", "dP_1", "Q_2"])
+@pytest.mark.parametrize("space2", ["P_1", "P_2", "dP_0", "dP_1", "Q_2"])
 def test_save_load(tmp_path, space1, space2):
-    # FIXME: Make it work for Quadrature spaces
     mesh = dolfinx.mesh.create_unit_cube(comm=MPI.COMM_WORLD, nx=3, ny=3, nz=3)
     U = ldrb.utils.space_from_string(space1, mesh=mesh, dim=3)
     u = dolfinx.fem.Function(U, name="u")
@@ -18,10 +17,21 @@ def test_save_load(tmp_path, space1, space2):
     V = ldrb.utils.space_from_string(space2, mesh=mesh, dim=3)
     v = dolfinx.fem.Function(V, name="v")
     v.interpolate(lambda x: -x)
+
     functions = [u, v]
     filename = tmp_path / "test_save_load.bp"
-    ldrb.io.save(comm=mesh.comm, filename=filename, functions=functions)
-    loaded_functions = ldrb.io.load(comm=mesh.comm, filename=filename, mesh=mesh)
+    function_space = {
+        "u": ldrb.utils.element2array(u.ufl_element()),
+        "v": ldrb.utils.element2array(v.ufl_element()),
+    }
+    ldrb.io.save(
+        comm=mesh.comm,
+        filename=filename,
+        functions=functions,
+    )
+    loaded_functions = ldrb.io.load(
+        comm=mesh.comm, filename=filename, mesh=mesh, function_space=function_space
+    )
     assert len(loaded_functions) == 2
 
     assert loaded_functions["u"].name == "u"
