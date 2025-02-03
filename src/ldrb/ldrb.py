@@ -506,7 +506,7 @@ def scalar_laplacians(
     cases, boundaries = find_cases_and_boundaries(markers)
     markers_str = "\n".join(["{}: {}".format(k, v) for k, v in markers.items()])
     logger.info(
-        ("Compute scalar laplacian solutions with the markers: \n" "{}").format(
+        ("Compute scalar laplacian solutions with the markers: \n{}").format(
             markers_str,
         ),
     )
