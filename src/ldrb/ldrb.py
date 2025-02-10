@@ -364,6 +364,7 @@ def apex_to_base(
         If not provided, the markers stored within the mesh will
         be used.
     """
+
     # Find apex by solving a laplacian with base solution = 0
     # Create Base variational problem
 
@@ -384,7 +385,6 @@ def apex_to_base(
 
     problem = LinearProblem(a, L, bcs=bcs, petsc_options={"ksp_type": "preonly", "pc_type": "lu"})
     uh = problem.solve()
-
     # with dolfinx.io.XDMFFile(MPI.COMM_WORLD, "apex.xdmf", "w") as file:
     #     file.write_mesh(mesh)
     #     file.write_function(uh)
@@ -396,36 +396,39 @@ def apex_to_base(
     local_max_val = uh.x.array.max()
     local_apex_coord = V.tabulate_dof_coordinates()[uh.x.array.argmax()]
 
-    global_max, apex_coord = mesh.comm.allreduce(
-        sendobj=(local_max_val, local_apex_coord),
-        op=MPI.MAXLOC,
-    )
-
+    global_max, *apex_coord = mesh.comm.allreduce((local_max_val, *local_apex_coord), op=MPI.MAX)
     logger.info("  Apex coord: ({0:.2f}, {1:.2f}, {2:.2f})".format(*apex_coord))
-
-    # Update rhs
-    L = v * dolfinx.fem.Constant(mesh, dolfinx.default_scalar_type(1.0)) * ufl.dx
 
     apex_points = dolfinx.mesh.locate_entities_boundary(
         mesh,
         0,
-        lambda x: np.isclose(x[0], apex_coord[0])
+        lambda x: np.isclose(x[2], apex_coord[2])
         & np.isclose(x[1], apex_coord[1])
         & np.isclose(x[2], apex_coord[2]),
     )
 
     zero = dolfinx.fem.Constant(mesh, dolfinx.default_scalar_type(0.0))
-    apex_bc = dolfinx.fem.dirichletbc(zero, apex_points, V)
+    apex_dofs = dolfinx.fem.locate_dofs_topological(V, 0, apex_points)
+    apex_bc = dolfinx.fem.dirichletbc(zero, apex_dofs, V)
+
+    base_facets = np.hstack([ffun.find(marker) for marker in base_marker])
+    base_dofs = dolfinx.fem.locate_dofs_topological(V, 2, base_facets)
+    one = dolfinx.fem.Constant(mesh, dolfinx.default_scalar_type(1.0))
+    base_bc = dolfinx.fem.dirichletbc(one, base_dofs, V)
 
     # Solve the poisson equation
     bcs = [apex_bc, base_bc]
+    u = ufl.TrialFunction(V)
+    v = ufl.TestFunction(V)
+    a = ufl.dot(ufl.grad(u), ufl.grad(v)) * ufl.dx
     L = v * zero * ufl.dx
     problem = LinearProblem(a, L, bcs=bcs, petsc_options={"ksp_type": "preonly", "pc_type": "lu"})
     apex = problem.solve()
+    print(apex.x.array.min(), apex.x.array.max())
 
-    # with dolfinx.io.XDMFFile(MPI.COMM_WORLD, "apex_base.xdmf", "w") as file:
-    #     file.write_mesh(mesh)
-    #     file.write_function(apex)
+    with dolfinx.io.XDMFFile(mesh.comm, "apex_base.xdmf", "w") as file:
+        file.write_mesh(mesh)
+        file.write_function(apex)
 
     return apex
 

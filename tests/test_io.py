@@ -20,7 +20,7 @@ def test_save_load(tmp_path, space1, space2):
     v.interpolate(lambda x: -x)
 
     functions = [u, v]
-    filename = tmp_path / "test_save_load.bp"
+    filename = mesh.comm.bcast(tmp_path / "test_save_load.bp", root=0)
     function_space = {
         "u": ldrb.utils.element2array(u.ufl_element()),
         "v": ldrb.utils.element2array(v.ufl_element()),
