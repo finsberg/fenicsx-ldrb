@@ -8,8 +8,11 @@ import dolfinx
 import numpy as np
 import ufl
 from dolfinx.fem.petsc import LinearProblem
+from packaging.version import Version
 
 from . import io, utils
+
+_dolfinx_version = Version(dolfinx.__version__)
 
 logger = logging.getLogger(__name__)
 
@@ -195,7 +198,7 @@ def dolfinx_ldrb(
     mesh: dolfinx.mesh.Mesh,
     fiber_space: str = "P_1",
     ffun: dolfinx.mesh.MeshTags | None = None,
-    markers: dict[str, list[int]] | dict[str, tuple[int, ...]] | dict[str, int] | None = None,
+    markers: (dict[str, list[int]] | dict[str, tuple[int, ...]] | dict[str, int] | None) = None,
     alpha_endo_lv: float = 40,
     alpha_epi_lv: float = -50,
     alpha_endo_rv: float | None = None,
@@ -449,14 +452,19 @@ def project_gradients(
     Vv = utils.space_from_string(fiber_space, mesh, dim=3)
     V = utils.space_from_string(fiber_space, mesh, dim=1)
 
+    if _dolfinx_version >= Version("0.10"):
+        V_points = V.element.interpolation_points
+        Vv_points = Vv.element.interpolation_points
+    else:
+        V_points = V.element.interpolation_points()
+        Vv_points = Vv.element.interpolation_points()
+
     output = {}
     data = {}
     for case, scalar_solution in scalar_solutions.items():
         output[case] = scalar_solution
         if case != "lv_rv":
-            grad_expr = dolfinx.fem.Expression(
-                ufl.grad(scalar_solution), Vv.element.interpolation_points()
-            )
+            grad_expr = dolfinx.fem.Expression(ufl.grad(scalar_solution), Vv_points)
             f = dolfinx.fem.Function(Vv)
             f.interpolate(grad_expr)
 
@@ -467,7 +475,7 @@ def project_gradients(
         # Add scalar data
         if case != "apex":
             f = dolfinx.fem.Function(V)
-            expr = dolfinx.fem.Expression(scalar_solution, V.element.interpolation_points())
+            expr = dolfinx.fem.Expression(scalar_solution, V_points)
             f.interpolate(expr)
             data[case + "_scalar"] = f.x.array
             output[case + "_scalar"] = f
