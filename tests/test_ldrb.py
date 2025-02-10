@@ -3,7 +3,7 @@ from mpi4py import MPI
 import dolfinx
 import numpy as np
 import pytest
-from dolfinx.geometry import bb_tree, compute_colliding_cells, compute_collisions_points
+import scifem
 
 import ldrb
 
@@ -14,17 +14,9 @@ def norm(v):
     return np.linalg.norm(v)
 
 
-def evaluate(u, x, tree=None):
-    mesh = u.function_space.mesh
-    if tree is None:
-        tree = bb_tree(mesh, mesh.geometry.dim)
-    cell_candidates = compute_collisions_points(tree, x)
-    cell = compute_colliding_cells(mesh, cell_candidates, x).array
-    return u.eval(x, cell[0])
-
-
 def test_scalar_laplacians():
-    mesh = dolfinx.mesh.create_unit_cube(MPI.COMM_WORLD, nx=2, ny=2, nz=2)
+    comm = MPI.COMM_WORLD
+    mesh = dolfinx.mesh.create_unit_cube(comm, nx=2, ny=2, nz=2)
     endo_facets = dolfinx.mesh.locate_entities_boundary(mesh, 2, lambda x: np.isclose(x[0], 0.0))
     epi_facets = dolfinx.mesh.locate_entities_boundary(mesh, 2, lambda x: np.isclose(x[0], 1.0))
     base_facets = dolfinx.mesh.locate_entities_boundary(mesh, 2, lambda x: np.isclose(x[1], 0.0))
@@ -51,38 +43,37 @@ def test_scalar_laplacians():
         markers=dict(lv=[endo_marker], epi=[epi_marker], base=[base_marker]),
     )
     assert len(solutions) == 3
-
     # Check apex to base - apex will be located at (1, 1, 1)
-    assert np.isclose(evaluate(solutions["apex"], np.array([1.0, 1.0, 1.0])), 0.0)
-    assert np.isclose(evaluate(solutions["apex"], np.array([0.0, 0.0, 0.0])), 1.0)
+    assert np.isclose(scifem.evaluate_function(solutions["apex"], np.array([[1.0, 1.0, 1.0]])), 0.0)
+    assert np.isclose(scifem.evaluate_function(solutions["apex"], np.array([[0.0, 0.0, 0.0]])), 1.0)
 
     # Check LV
-    assert np.isclose(evaluate(solutions["lv"], np.array([0.0, 0.0, 0.0])), 1.0)
-    assert np.isclose(evaluate(solutions["lv"], np.array([0.5, 0.5, 0.5])), 0.5)
-    assert np.isclose(evaluate(solutions["lv"], np.array([0.5, 0.1, 0.1])), 0.5)
-    assert np.isclose(evaluate(solutions["lv"], np.array([1.0, 1.0, 1.0])), 0.0)
+    assert np.isclose(scifem.evaluate_function(solutions["lv"], np.array([[0.0, 0.0, 0.0]])), 1.0)
+    assert np.isclose(scifem.evaluate_function(solutions["lv"], np.array([[0.5, 0.5, 0.5]])), 0.5)
+    assert np.isclose(scifem.evaluate_function(solutions["lv"], np.array([[0.5, 0.1, 0.1]])), 0.5)
+    assert np.isclose(scifem.evaluate_function(solutions["lv"], np.array([[1.0, 1.0, 1.0]])), 0.0)
 
     # Check EPI (which should be opposite of LV)
-    assert np.isclose(evaluate(solutions["epi"], np.array([0.0, 0.0, 0.0])), 0.0)
-    assert np.isclose(evaluate(solutions["epi"], np.array([0.5, 0.5, 0.5])), 0.5)
-    assert np.isclose(evaluate(solutions["epi"], np.array([0.5, 0.1, 0.1])), 0.5)
-    assert np.isclose(evaluate(solutions["epi"], np.array([1.0, 1.0, 1.0])), 1.0)
+    assert np.isclose(scifem.evaluate_function(solutions["epi"], np.array([[0.0, 0.0, 0.0]])), 0.0)
+    assert np.isclose(scifem.evaluate_function(solutions["epi"], np.array([[0.5, 0.5, 0.5]])), 0.5)
+    assert np.isclose(scifem.evaluate_function(solutions["epi"], np.array([[0.5, 0.1, 0.1]])), 0.5)
+    assert np.isclose(scifem.evaluate_function(solutions["epi"], np.array([[1.0, 1.0, 1.0]])), 1.0)
 
 
 def test_apex_to_base(lv_geometry):
     apex = ldrb.ldrb.apex_to_base(lv_geometry.mesh, lv_geometry.markers["base"], lv_geometry.ffun)
-    assert np.isclose(apex.x.array.max(), 1.0)
-    assert np.isclose(apex.x.array.min(), 0.0)
+    assert np.isclose(lv_geometry.mesh.comm.allreduce(apex.x.array.max(), op=MPI.MAX), 1.0)
+    assert np.isclose(lv_geometry.mesh.comm.allreduce(apex.x.array.min(), op=MPI.MIN), 0.0)
 
     # Base is located at x=5.0
-    x_base = np.array([5.0, 8.0, 0.0])
+    x_base = np.array([[5.0, 8.0, 0.0]])
     # Value at base should be 1.0
-    assert np.isclose(evaluate(apex, x_base), 1.0)
+    assert np.isclose(scifem.evaluate_function(apex, x_base), 1.0)
 
     # Apex is located at x=-20.0
-    x_apex = np.array([-20.0, 0.0, 0.0])
+    x_apex = np.array([[-20.0, 0.0, 0.0]])
     # Value at apex should be 0.0
-    assert np.isclose(evaluate(apex, x_apex), 0.0)
+    assert np.isclose(scifem.evaluate_function(apex, x_apex), 0.0)
 
 
 @pytest.mark.parametrize("fiber_space", ["P_1", "P_2", "dP_0", "dP_1", "Q_1", "Q_2"])

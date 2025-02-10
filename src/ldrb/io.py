@@ -54,7 +54,9 @@ def save(
 
     if filename.exists():
         if overwrite:
-            shutil.rmtree(filename)
+            comm.barrier()
+            shutil.rmtree(filename, ignore_errors=True)
+            comm.barrier()
         else:
             logger.info(f"File {filename} already exists, skipping")
             return
