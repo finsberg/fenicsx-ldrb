@@ -51,6 +51,12 @@ Note that you can install the package with `pip`, but then you need to install F
 python3 -m pip install fenicsx-ldrb
 ```
 
+## conda
+The package can also be installed with conda, i.e
+```
+conda install -c conda-forge fenicsx-ldrb
+```
+
 ## Docker
 To pull the latest docker image you can do
 ```
