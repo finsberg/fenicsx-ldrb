@@ -211,6 +211,7 @@ def dolfinx_ldrb(
     beta_epi_rv: float | None = None,
     beta_endo_sept: float | None = None,
     beta_epi_sept: float | None = None,
+    **kwargs,
 ) -> io.LDRBOutput:
     r"""
     Create fiber, cross fibers and sheet directions
@@ -280,6 +281,9 @@ def dolfinx_ldrb(
             Sheet angle at the septum epicardium.
 
     """
+    # Print warning of unused arguments
+    if kwargs:
+        logger.warning("The following arguments were not used: {}".format(", ".join(kwargs.keys())))
     # Solve the Laplace-Dirichlet problem
     processed_markers = transform_markers(process_markers(markers))
 
