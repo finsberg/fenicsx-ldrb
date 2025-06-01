@@ -429,9 +429,9 @@ def apex_to_base(
     problem = LinearProblem(a, L, bcs=bcs, petsc_options={"ksp_type": "preonly", "pc_type": "lu"})
     apex = problem.solve()
 
-    with dolfinx.io.XDMFFile(mesh.comm, "apex_base.xdmf", "w") as file:
-        file.write_mesh(mesh)
-        file.write_function(apex)
+    # with dolfinx.io.XDMFFile(mesh.comm, "apex_base.xdmf", "w") as file:
+    #     file.write_mesh(mesh)
+    #     file.write_function(apex)
 
     return apex
 
