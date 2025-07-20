@@ -387,7 +387,13 @@ def apex_to_base(
 
     bcs = [base_bc]
 
-    problem = LinearProblem(a, L, bcs=bcs, petsc_options={"ksp_type": "preonly", "pc_type": "lu"})
+    problem = LinearProblem(
+        a,
+        L,
+        bcs=bcs,
+        petsc_options_prefix="ldrb_apex_to_base_global",
+        petsc_options={"ksp_type": "preonly", "pc_type": "lu"},
+    )
     result = problem.solve()
     if _dolfinx_version >= Version("0.10"):
         uh = result[0]
@@ -430,7 +436,13 @@ def apex_to_base(
     v = ufl.TestFunction(V)
     a = ufl.dot(ufl.grad(u), ufl.grad(v)) * ufl.dx
     L = v * zero * ufl.dx
-    problem = LinearProblem(a, L, bcs=bcs, petsc_options={"ksp_type": "preonly", "pc_type": "lu"})
+    problem = LinearProblem(
+        a,
+        L,
+        bcs=bcs,
+        petsc_options_prefix="ldrb_apex_to_base",
+        petsc_options={"ksp_type": "preonly", "pc_type": "lu"},
+    )
     result = problem.solve()
     if _dolfinx_version >= Version("0.10"):
         apex = result[0]
@@ -578,7 +590,11 @@ def scalar_laplacians(
         bcs = [endo_bc, epi_bc]
 
         problem = LinearProblem(
-            a, L, bcs=bcs, petsc_options={"ksp_type": "preonly", "pc_type": "lu"}
+            a,
+            L,
+            bcs=bcs,
+            petsc_options_prefix="ldrb_scalar_laplacian",
+            petsc_options={"ksp_type": "preonly", "pc_type": "lu"},
         )
         result = problem.solve()
         if _dolfinx_version >= Version("0.10"):
@@ -605,7 +621,11 @@ def scalar_laplacians(
         bcs = [endo_bc, epi_bc]
 
         problem = LinearProblem(
-            a, L, bcs=bcs, petsc_options={"ksp_type": "preonly", "pc_type": "lu"}
+            a,
+            L,
+            bcs=bcs,
+            petsc_options_prefix="ldrb_scalar_laplacian_rv",
+            petsc_options={"ksp_type": "preonly", "pc_type": "lu"},
         )
         result = problem.solve()
         if _dolfinx_version >= Version("0.10"):
