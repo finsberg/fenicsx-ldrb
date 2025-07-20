@@ -387,12 +387,19 @@ def apex_to_base(
 
     bcs = [base_bc]
 
-    problem = LinearProblem(a, L, bcs=bcs, petsc_options={"ksp_type": "preonly", "pc_type": "lu"})
-    result = problem.solve()
+    kwargs = {}
     if _dolfinx_version >= Version("0.10"):
-        uh = result[0]
-    else:
-        uh = result
+        kwargs["petsc_options_prefix"] = "ldrb_apex_to_base_global"
+
+    problem = LinearProblem(
+        a,
+        L,
+        bcs=bcs,
+        petsc_options={"ksp_type": "preonly", "pc_type": "lu"},
+        **kwargs,
+    )
+    result = problem.solve()
+    uh = result
     # with dolfinx.io.XDMFFile(MPI.COMM_WORLD, "apex.xdmf", "w") as file:
     #     file.write_mesh(mesh)
     #     file.write_function(uh)
@@ -430,12 +437,20 @@ def apex_to_base(
     v = ufl.TestFunction(V)
     a = ufl.dot(ufl.grad(u), ufl.grad(v)) * ufl.dx
     L = v * zero * ufl.dx
-    problem = LinearProblem(a, L, bcs=bcs, petsc_options={"ksp_type": "preonly", "pc_type": "lu"})
-    result = problem.solve()
+
+    kwargs = {}
     if _dolfinx_version >= Version("0.10"):
-        apex = result[0]
-    else:
-        apex = result
+        kwargs["petsc_options_prefix"] = "ldrb_apex_to_base"
+
+    problem = LinearProblem(
+        a,
+        L,
+        bcs=bcs,
+        petsc_options={"ksp_type": "preonly", "pc_type": "lu"},
+        **kwargs,
+    )
+    result = problem.solve()
+    apex = result
 
     # with dolfinx.io.XDMFFile(mesh.comm, "apex_base.xdmf", "w") as file:
     #     file.write_mesh(mesh)
@@ -576,15 +591,19 @@ def scalar_laplacians(
         epi_bc = dolfinx.fem.dirichletbc(zero, epi_dofs, V)
 
         bcs = [endo_bc, epi_bc]
+        kwargs = {}
+        if _dolfinx_version >= Version("0.10"):
+            kwargs["petsc_options_prefix"] = f"ldrb_scalar_laplacian_{case}"
 
         problem = LinearProblem(
-            a, L, bcs=bcs, petsc_options={"ksp_type": "preonly", "pc_type": "lu"}
+            a,
+            L,
+            bcs=bcs,
+            petsc_options={"ksp_type": "preonly", "pc_type": "lu"},
+            **kwargs,
         )
         result = problem.solve()
-        if _dolfinx_version >= Version("0.10"):
-            uh = result[0]
-        else:
-            uh = result
+        uh = result
         solutions[case] = uh
 
         # with dolfinx.io.XDMFFile(MPI.COMM_WORLD, f"{case}.xdmf", "w") as file:
@@ -604,14 +623,19 @@ def scalar_laplacians(
 
         bcs = [endo_bc, epi_bc]
 
+        kwargs = {}
+        if _dolfinx_version >= Version("0.10"):
+            kwargs["petsc_options_prefix"] = "ldrb_scalar_laplacian_rv"
+
         problem = LinearProblem(
-            a, L, bcs=bcs, petsc_options={"ksp_type": "preonly", "pc_type": "lu"}
+            a,
+            L,
+            bcs=bcs,
+            petsc_options={"ksp_type": "preonly", "pc_type": "lu"},
+            **kwargs,
         )
         result = problem.solve()
-        if _dolfinx_version >= Version("0.10"):
-            uh = result[0]
-        else:
-            uh = result
+        uh = result
         solutions["lv_rv"] = uh
 
         # with dolfinx.io.XDMFFile(MPI.COMM_WORLD, "lv_rv.xdmf", "w") as file:
