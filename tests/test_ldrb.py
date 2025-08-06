@@ -6,6 +6,7 @@ import pytest
 import scifem
 
 import cardiac_geometries
+import gmsh
 import ldrb
 
 tol = 1e-12
@@ -151,6 +152,7 @@ def test_lv_regression(lv_geometry, fiber_space):
         "Q_2",
     ],
 )
+@pytest.mark.skipif(gmsh.__version__ == "4.14.0", reason="GMSH 4.14.0 has a bug with fuse")
 def test_biv_regression(biv_geometry, fiber_space):
     ldrb.dolfinx_ldrb(
         mesh=biv_geometry.mesh,

@@ -29,6 +29,8 @@ test = [
     "pytest-cov",
     "cardiac-geometriesx",
     "scifem",
+    "ukb-atlas",
+    "pyvista",
 ]
 dev = [
     "pdbpp",
