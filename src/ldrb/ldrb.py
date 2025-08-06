@@ -192,6 +192,29 @@ def transform_markers(markers: dict[str, list[int]]) -> dict[str, list[int]]:
             epi=[markers["EPI"][0]],
             base=[markers["BASE"][0]],
         )
+    elif "LV" in markers:
+        if "PV" in markers:
+            # This is the full UKB atlas (most likely)
+            return dict(
+                lv=[markers["LV"][0]],
+                rv=[markers["RV"][0]],
+                epi=[markers["EPI"][0]],
+                base=[markers["PV"][0], markers["MV"][0], markers["AV"][0], markers["TV"][0]],
+            )
+        elif "RV" in markers:
+            return dict(
+                lv=[markers["LV"][0]],
+                rv=[markers["RV"][0]],
+                epi=[markers["EPI"][0]],
+                base=[markers["BASE"][0]],
+            )
+        else:
+            # No RV marker, so assume it is the same as LV
+            return dict(
+                lv=[markers["LV"][0]],
+                epi=[markers["EPI"][0]],
+                base=[markers["BASE"][0]],
+            )
     else:
         return markers
 
