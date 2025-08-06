@@ -1,6 +1,7 @@
 from mpi4py import MPI
 
 import dolfinx
+import gmsh
 import numpy as np
 import pytest
 import scifem
@@ -151,6 +152,7 @@ def test_lv_regression(lv_geometry, fiber_space):
         "Q_2",
     ],
 )
+@pytest.mark.skipif(gmsh.__version__ == "4.14.0", reason="GMSH 4.14.0 has a bug with fuse")
 def test_biv_regression(biv_geometry, fiber_space):
     ldrb.dolfinx_ldrb(
         mesh=biv_geometry.mesh,
