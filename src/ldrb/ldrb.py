@@ -52,6 +52,7 @@ def compute_fiber_sheet_system(
     beta_epi_rv: float | None = None,
     beta_endo_sept: float | None = None,
     beta_epi_sept: float | None = None,
+    epi_only: bool = False,
 ) -> io.FiberSheetSystem:
     """
     Compute the fiber-sheets system on all degrees of freedom.
@@ -141,6 +142,7 @@ def compute_fiber_sheet_system(
         beta_epi_rv,
         beta_endo_sept,
         beta_epi_sept,
+        epi_only=epi_only,
     )
 
     return io.FiberSheetSystem(f0=f0, s0=s0, n0=n0)
@@ -211,6 +213,7 @@ def dolfinx_ldrb(
     beta_epi_rv: float | None = None,
     beta_endo_sept: float | None = None,
     beta_epi_sept: float | None = None,
+    epi_only: bool = False,
     **kwargs,
 ) -> io.LDRBOutput:
     r"""
@@ -279,7 +282,10 @@ def dolfinx_ldrb(
             Sheet angle at the septum endocardium.
         beta_epi_sept : scalar
             Sheet angle at the septum epicardium.
-
+    epi_only : bool
+        If true, then only the angles on the epicardial
+        surface will be used. This is a hack to make it
+        possible to compute purely longitudinal fibers
     """
     # Print warning of unused arguments
     if kwargs:
@@ -319,6 +325,7 @@ def dolfinx_ldrb(
         beta_epi_rv=beta_epi_rv,
         beta_endo_sept=beta_endo_sept,
         beta_epi_sept=beta_epi_sept,
+        epi_only=epi_only,
         **data,
     )  # type:ignore
 

@@ -297,6 +297,7 @@ def compute_fiber_sheet_system(
     beta_epi_rv,
     beta_endo_sept,
     beta_epi_sept,
+    epi_only=False,
 ):
     grad_lv = np.zeros(3)
     grad_rv = np.zeros(3)
@@ -383,8 +384,11 @@ def compute_fiber_sheet_system(
         Q_epi = axis(grad_ab, grad_epi)
         Q_epi = orient(Q_epi, alpha_w, beta_w)
 
-        Q_endo = bislerp(Q_lv, Q_rv, depth)
-        Q_fiber = bislerp(Q_endo, Q_epi, epi)
+        if epi_only:
+            Q_fiber = Q_epi
+        else:
+            Q_endo = bislerp(Q_lv, Q_rv, depth)
+            Q_fiber = bislerp(Q_endo, Q_epi, epi)
 
         f0[xdofs[i]] = Q_fiber[0, 0]
         f0[ydofs[i]] = Q_fiber[1, 0]
