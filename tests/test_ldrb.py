@@ -1,12 +1,12 @@
 from mpi4py import MPI
 
 import dolfinx
+import gmsh
 import numpy as np
 import pytest
 import scifem
 
 import cardiac_geometries
-import gmsh
 import ldrb
 
 tol = 1e-12
