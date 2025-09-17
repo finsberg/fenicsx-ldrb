@@ -1,6 +1,6 @@
 from importlib.metadata import metadata
 
-from . import calculus, io, ldrb, utils
+from . import aha, calculus, io, ldrb, utils
 from .ldrb import dolfinx_ldrb, project_gradients, scalar_laplacians
 from .utils import space_from_string
 
@@ -21,4 +21,5 @@ __all__ = [
     "space_from_string",
     "calculus",
     "io",
+    "aha",
 ]
