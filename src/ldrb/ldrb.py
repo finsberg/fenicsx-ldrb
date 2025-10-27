@@ -314,8 +314,9 @@ def dolfinx_ldrb(
     if kwargs:
         logger.warning("The following arguments were not used: {}".format(", ".join(kwargs.keys())))
     # Solve the Laplace-Dirichlet problem
+    logger.debug(f"Incoming markers: {markers}")
     processed_markers = transform_markers(process_markers(markers))
-
+    logger.debug(f"Processed markers: {processed_markers}")
     logger.info("Calculating scalar fields")
     scalar_solutions = scalar_laplacians(
         mesh=mesh,
