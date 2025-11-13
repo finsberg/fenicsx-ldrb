@@ -1,7 +1,6 @@
 from mpi4py import MPI
 
 import dolfinx
-import gmsh
 import numpy as np
 import pytest
 import scifem
@@ -55,13 +54,6 @@ def biv_geometry(tmpdir_factory):
     comm = MPI.COMM_WORLD
     outdir = comm.bcast(tmpdir_factory.mktemp("biv"), root=0)
     geo = cardiac_geometries.mesh.biv_ellipsoid(outdir=outdir)
-    markers = {
-        "base": geo.markers["BASE"][0],
-        "epi": geo.markers["EPI"][0],
-        "lv": geo.markers["ENDO_LV"][0],
-        "rv": geo.markers["ENDO_RV"][0],
-    }
-    geo.markers.update(markers)
     return geo
 
 
@@ -152,7 +144,6 @@ def test_lv_regression(lv_geometry, fiber_space):
         "Q_2",
     ],
 )
-@pytest.mark.skipif(gmsh.__version__ == "4.14.0", reason="GMSH 4.14.0 has a bug with fuse")
 def test_biv_regression(biv_geometry, fiber_space):
     ldrb.dolfinx_ldrb(
         mesh=biv_geometry.mesh,
