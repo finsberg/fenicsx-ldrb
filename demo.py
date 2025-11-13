@@ -14,7 +14,6 @@ geo = cardiac_geometries.mesh.biv_ellipsoid(outdir="biv")
 
 # Next we will use `pyvista` to plot the mesh
 
-pyvista.start_xvfb()
 vtk_mesh = dolfinx.plot.vtk_mesh(geo.mesh, geo.mesh.topology.dim)
 grid = pyvista.UnstructuredGrid(*vtk_mesh)
 plotter = pyvista.Plotter()
