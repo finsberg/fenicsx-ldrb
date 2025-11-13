@@ -46,7 +46,7 @@ demos = [
    "cardiac-geometriesx",
 ]
 docs = [
-   "jupyter-book",
+   "jupyter-book<2.0",
    "jupytext",
    "pyvista[all]",
    "fenicsx-ldrb[demos]"
