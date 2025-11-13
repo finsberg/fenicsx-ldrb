@@ -215,6 +215,14 @@ def transform_markers(markers: dict[str, list[int]]) -> dict[str, list[int]]:
                 epi=[markers["EPI"][0]],
                 base=[markers["BASE"][0]],
             )
+    elif "LV_EPI_FW" in markers:
+        # New idealized biventricle mesh
+        return dict(
+            lv=[markers["LV_ENDO_FW"][0], markers["LV_SEPTUM"][0]],
+            rv=[markers["RV_ENDO_FW"][0], markers["RV_SEPTUM"][0]],
+            epi=[markers["LV_EPI_FW"][0], markers["RV_EPI_FW"][0]],
+            base=[markers["BASE"][0]],
+        )
     else:
         return markers
 
