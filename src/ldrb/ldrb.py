@@ -456,9 +456,11 @@ def apex_to_base(
     apex_points = dolfinx.mesh.locate_entities_boundary(
         mesh,
         0,
-        lambda x: np.isclose(x[2], apex_coord[2])
-        & np.isclose(x[1], apex_coord[1])
-        & np.isclose(x[2], apex_coord[2]),
+        lambda x: (
+            np.isclose(x[2], apex_coord[2])
+            & np.isclose(x[1], apex_coord[1])
+            & np.isclose(x[2], apex_coord[2])
+        ),
     )
 
     zero = dolfinx.fem.Constant(mesh, dolfinx.default_scalar_type(0.0))
