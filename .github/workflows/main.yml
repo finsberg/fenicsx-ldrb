@@ -27,7 +27,8 @@ jobs:
       - name: Install dev dependencies on nightly
         if: ${{ matrix.container == 'ghcr.io/fenics/dolfinx/dolfinx:nightly' }}
         run: |
-          python3 -m pip install git+https://github.com/jorgensd/adios4dolfinx.git
+          python3 -m pip install git+https://github.com/ComputationalPhysiology/cardiac-geometriesx.git
+          python3 -m pip install git+https://github.com/scientificcomputing/io4dolfinx.git
           python3 -m pip install git+https://github.com/scientificcomputing/scifem.git
 
       - name: Install package
