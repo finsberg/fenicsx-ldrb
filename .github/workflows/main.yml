@@ -22,12 +22,13 @@ jobs:
         ]
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Install dev dependencies on nightly
         if: ${{ matrix.container == 'ghcr.io/fenics/dolfinx/dolfinx:nightly' }}
         run: |
-          python3 -m pip install git+https://github.com/jorgensd/adios4dolfinx.git
+          python3 -m pip install git+https://github.com/ComputationalPhysiology/cardiac-geometriesx.git
+          python3 -m pip install git+https://github.com/scientificcomputing/io4dolfinx.git
           python3 -m pip install git+https://github.com/scientificcomputing/scifem.git
 
       - name: Install package
@@ -50,7 +51,7 @@ jobs:
 
       - name: Upload HTML report.
         if: ${{ matrix.container == 'ghcr.io/fenics/dolfinx/dolfinx:v0.9.0' }}
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: html-report
           path: htmlcov
