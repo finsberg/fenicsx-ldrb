@@ -13,7 +13,7 @@ keywords = ["cardiac", "electrophysiology"]
 dependencies = [
     "numpy",
     "numba",
-    "adios4dolfinx",
+    "io4dolfinx",
     "scipy",
 ]
 
