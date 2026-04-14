@@ -40,7 +40,7 @@ jobs:
 
       - name: Extract metadata (tags, labels) for base-image
         id: meta-base
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
