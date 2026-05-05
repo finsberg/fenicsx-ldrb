@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from mpi4py import MPI
 
@@ -15,6 +16,10 @@ from . import io, utils
 _dolfinx_version = Version(dolfinx.__version__)
 
 logger = logging.getLogger(__name__)
+
+
+def default_petsc_options() -> dict[str, Any]:
+    return {"ksp_type": "preonly", "pc_type": "lu"}
 
 
 def standard_dofs(n: int) -> np.ndarray:
@@ -245,6 +250,7 @@ def dolfinx_ldrb(
     beta_endo_sept: float | None = None,
     beta_epi_sept: float | None = None,
     epi_only: bool = False,
+    petsc_options: dict[str, Any] | None = None,
     **kwargs,
 ) -> io.LDRBOutput:
     r"""
@@ -326,10 +332,14 @@ def dolfinx_ldrb(
     processed_markers = transform_markers(process_markers(markers))
     logger.debug(f"Processed markers: {processed_markers}")
     logger.info("Calculating scalar fields")
+    if ffun is None:
+        raise ValueError("ffun must be provided to compute LDRB fibers.")
+
     scalar_solutions = scalar_laplacians(
         mesh=mesh,
         markers=processed_markers,
         ffun=ffun,
+        petsc_options=petsc_options,
     )
 
     # Create gradients
@@ -391,6 +401,7 @@ def apex_to_base(
     mesh: dolfinx.mesh.Mesh,
     base_marker: list[int],
     ffun: dolfinx.mesh.MeshTags,
+    petsc_options: dict[str, Any] | None = None,
 ) -> dolfinx.fem.Function:
     """
     Find the apex coordinate and compute the laplace
@@ -407,7 +418,8 @@ def apex_to_base(
         If not provided, the markers stored within the mesh will
         be used.
     """
-
+    if petsc_options is None:
+        petsc_options = default_petsc_options()
     # Find apex by solving a laplacian with base solution = 0
     # Create Base variational problem
 
@@ -434,7 +446,7 @@ def apex_to_base(
         a,
         L,
         bcs=bcs,
-        petsc_options={"ksp_type": "preonly", "pc_type": "lu"},
+        petsc_options=petsc_options,
         **kwargs,
     )
     result = problem.solve()
@@ -487,7 +499,7 @@ def apex_to_base(
         a,
         L,
         bcs=bcs,
-        petsc_options={"ksp_type": "preonly", "pc_type": "lu"},
+        petsc_options=petsc_options,
         **kwargs,
     )
     result = problem.solve()
@@ -558,6 +570,7 @@ def scalar_laplacians(
     mesh: dolfinx.mesh.Mesh,
     markers: dict[str, list[int]],
     ffun: dolfinx.mesh.MeshTags,
+    petsc_options: dict[str, Any] | None = None,
 ) -> dict[str, dolfinx.fem.Function]:
     """
     Calculate the laplacians
@@ -576,6 +589,8 @@ def scalar_laplacians(
         vales will be used: base = 10, rv = 20, lv = 30, epi = 40.
 
     """
+    if petsc_options is None:
+        petsc_options = default_petsc_options()
 
     if not isinstance(mesh, dolfinx.mesh.Mesh):
         raise TypeError("Expected a dolfin.Mesh as the mesh argument.")
@@ -604,7 +619,7 @@ def scalar_laplacians(
     logger.info("  Num cells: {0}".format(num_cells))
 
     solutions: dict[str, dolfinx.fem.Function] = {}
-    apex = apex_to_base(mesh, markers["base"], ffun)
+    apex = apex_to_base(mesh, markers["base"], ffun, petsc_options=petsc_options)
     V = apex.function_space
     u = ufl.TrialFunction(V)
     v = ufl.TestFunction(V)
@@ -640,7 +655,7 @@ def scalar_laplacians(
             a,
             L,
             bcs=bcs,
-            petsc_options={"ksp_type": "preonly", "pc_type": "lu"},
+            petsc_options=petsc_options,
             **kwargs,
         )
         result = problem.solve()
@@ -672,7 +687,7 @@ def scalar_laplacians(
             a,
             L,
             bcs=bcs,
-            petsc_options={"ksp_type": "preonly", "pc_type": "lu"},
+            petsc_options=petsc_options,
             **kwargs,
         )
         result = problem.solve()
