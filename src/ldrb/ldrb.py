@@ -323,6 +323,11 @@ def dolfinx_ldrb(
         If true, then only the angles on the epicardial
         surface will be used. This is a hack to make it
         possible to compute purely longitudinal fibers
+    petsc_options : dict (optional)
+        A dictionary with petsc options to pass to the linear solvers.
+        This can be used to set the linear solver and preconditioner.
+        If not provided, the default options will be used, which are
+        ksp_type = preonly and pc_type = lu.
     """
     # Print warning of unused arguments
     if kwargs:
@@ -417,6 +422,11 @@ def apex_to_base(
         A facet function containing markers for the boundaries.
         If not provided, the markers stored within the mesh will
         be used.
+    petsc_options : dict (optional)
+        A dictionary with petsc options to pass to the linear solvers.
+        This can be used to set the linear solver and preconditioner.
+        If not provided, the default options will be used, which are
+        ksp_type = preonly and pc_type = lu.
     """
     if petsc_options is None:
         petsc_options = default_petsc_options()
@@ -587,7 +597,15 @@ def scalar_laplacians(
         'base', 'lv', 'epi, 'rv' (optional).
         If the markers are not provided the following default
         vales will be used: base = 10, rv = 20, lv = 30, epi = 40.
-
+    ffun : dolfin.MeshFunctionSizet (optional)
+        A facet function containing markers for the boundaries.
+        If not provided, the markers stored within the mesh will
+        be used.
+    petsc_options : dict (optional)
+        A dictionary with petsc options to pass to the linear solvers.
+        This can be used to set the linear solver and preconditioner.
+        If not provided, the default options will be used, which are
+        ksp_type = preonly and pc_type = lu.
     """
     if petsc_options is None:
         petsc_options = default_petsc_options()
