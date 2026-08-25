@@ -452,7 +452,7 @@ def apex_to_base(
     if _dolfinx_version >= Version("0.10"):
         kwargs["petsc_options_prefix"] = "ldrb_apex_to_base_global"
 
-    problem = LinearProblem(
+    problem = LinearProblem(  # type: ignore[call-overload]
         a,
         L,
         bcs=bcs,
@@ -505,7 +505,7 @@ def apex_to_base(
     if _dolfinx_version >= Version("0.10"):
         kwargs["petsc_options_prefix"] = "ldrb_apex_to_base"
 
-    problem = LinearProblem(
+    problem = LinearProblem(  # type: ignore[call-overload]
         a,
         L,
         bcs=bcs,
@@ -669,7 +669,7 @@ def scalar_laplacians(
         if _dolfinx_version >= Version("0.10"):
             kwargs["petsc_options_prefix"] = f"ldrb_scalar_laplacian_{case}"
 
-        problem = LinearProblem(
+        problem = LinearProblem(  # type: ignore[call-overload]
             a,
             L,
             bcs=bcs,
@@ -701,7 +701,7 @@ def scalar_laplacians(
         if _dolfinx_version >= Version("0.10"):
             kwargs["petsc_options_prefix"] = "ldrb_scalar_laplacian_rv"
 
-        problem = LinearProblem(
+        problem = LinearProblem(  # type: ignore[call-overload]
             a,
             L,
             bcs=bcs,

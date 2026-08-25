@@ -43,7 +43,7 @@ def parse_element(space_string: str, mesh: dolfinx.mesh.Mesh, dim: int) -> basix
 
 def space_from_string(
     space_string: str, mesh: dolfinx.mesh.Mesh, dim: int
-) -> dolfinx.fem.functionspace:
+) -> dolfinx.fem.FunctionSpace:
     """
     Constructed a finite elements space from a string
     representation of the space

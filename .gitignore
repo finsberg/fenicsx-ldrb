@@ -6,6 +6,7 @@
 *.pvd
 *.xml
 *.bp
+devcontainer-lock.json
 
 demos/demo*.md
 demos/endo_lv_0.ply
