@@ -457,10 +457,10 @@ def apex_to_base(
         L,
         bcs=bcs,
         petsc_options=petsc_options,
-        **kwargs,
+        **kwargs,  # type: ignore[arg-type]
     )
-    result = problem.solve()
-    uh = result
+    uh = problem.solve()
+    assert isinstance(uh, dolfinx.fem.Function)
     # with dolfinx.io.XDMFFile(MPI.COMM_WORLD, "apex.xdmf", "w") as file:
     #     file.write_mesh(mesh)
     #     file.write_function(uh)
@@ -510,10 +510,10 @@ def apex_to_base(
         L,
         bcs=bcs,
         petsc_options=petsc_options,
-        **kwargs,
+        **kwargs,  # type: ignore[arg-type]
     )
-    result = problem.solve()
-    apex = result
+    apex = problem.solve()
+    assert isinstance(apex, dolfinx.fem.Function)
 
     # with dolfinx.io.XDMFFile(mesh.comm, "apex_base.xdmf", "w") as file:
     #     file.write_mesh(mesh)
@@ -674,10 +674,10 @@ def scalar_laplacians(
             L,
             bcs=bcs,
             petsc_options=petsc_options,
-            **kwargs,
+            **kwargs,  # type: ignore[arg-type]
         )
-        result = problem.solve()
-        uh = result
+        uh = problem.solve()
+        assert isinstance(uh, dolfinx.fem.Function)
         solutions[case] = uh
 
         # with dolfinx.io.XDMFFile(MPI.COMM_WORLD, f"{case}.xdmf", "w") as file:
@@ -706,10 +706,10 @@ def scalar_laplacians(
             L,
             bcs=bcs,
             petsc_options=petsc_options,
-            **kwargs,
+            **kwargs,  # type: ignore[arg-type]
         )
-        result = problem.solve()
-        uh = result
+        uh = problem.solve()
+        assert isinstance(uh, dolfinx.fem.Function)
         solutions["lv_rv"] = uh
 
         # with dolfinx.io.XDMFFile(MPI.COMM_WORLD, "lv_rv.xdmf", "w") as file:
