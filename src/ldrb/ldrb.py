@@ -452,15 +452,15 @@ def apex_to_base(
     if _dolfinx_version >= Version("0.10"):
         kwargs["petsc_options_prefix"] = "ldrb_apex_to_base_global"
 
-    problem = LinearProblem(
+    problem = LinearProblem(  # type: ignore[call-overload]
         a,
         L,
         bcs=bcs,
         petsc_options=petsc_options,
-        **kwargs,
+        **kwargs,  # type: ignore[arg-type]
     )
-    result = problem.solve()
-    uh = result
+    uh = problem.solve()
+    assert isinstance(uh, dolfinx.fem.Function)
     # with dolfinx.io.XDMFFile(MPI.COMM_WORLD, "apex.xdmf", "w") as file:
     #     file.write_mesh(mesh)
     #     file.write_function(uh)
@@ -505,15 +505,15 @@ def apex_to_base(
     if _dolfinx_version >= Version("0.10"):
         kwargs["petsc_options_prefix"] = "ldrb_apex_to_base"
 
-    problem = LinearProblem(
+    problem = LinearProblem(  # type: ignore[call-overload]
         a,
         L,
         bcs=bcs,
         petsc_options=petsc_options,
-        **kwargs,
+        **kwargs,  # type: ignore[arg-type]
     )
-    result = problem.solve()
-    apex = result
+    apex = problem.solve()
+    assert isinstance(apex, dolfinx.fem.Function)
 
     # with dolfinx.io.XDMFFile(mesh.comm, "apex_base.xdmf", "w") as file:
     #     file.write_mesh(mesh)
@@ -669,15 +669,15 @@ def scalar_laplacians(
         if _dolfinx_version >= Version("0.10"):
             kwargs["petsc_options_prefix"] = f"ldrb_scalar_laplacian_{case}"
 
-        problem = LinearProblem(
+        problem = LinearProblem(  # type: ignore[call-overload]
             a,
             L,
             bcs=bcs,
             petsc_options=petsc_options,
-            **kwargs,
+            **kwargs,  # type: ignore[arg-type]
         )
-        result = problem.solve()
-        uh = result
+        uh = problem.solve()
+        assert isinstance(uh, dolfinx.fem.Function)
         solutions[case] = uh
 
         # with dolfinx.io.XDMFFile(MPI.COMM_WORLD, f"{case}.xdmf", "w") as file:
@@ -701,15 +701,15 @@ def scalar_laplacians(
         if _dolfinx_version >= Version("0.10"):
             kwargs["petsc_options_prefix"] = "ldrb_scalar_laplacian_rv"
 
-        problem = LinearProblem(
+        problem = LinearProblem(  # type: ignore[call-overload]
             a,
             L,
             bcs=bcs,
             petsc_options=petsc_options,
-            **kwargs,
+            **kwargs,  # type: ignore[arg-type]
         )
-        result = problem.solve()
-        uh = result
+        uh = problem.solve()
+        assert isinstance(uh, dolfinx.fem.Function)
         solutions["lv_rv"] = uh
 
         # with dolfinx.io.XDMFFile(MPI.COMM_WORLD, "lv_rv.xdmf", "w") as file:

@@ -15,7 +15,7 @@ from . import io, ldrb
 @dataclass
 class Geometry:
     mesh: dolfinx.mesh.Mesh
-    ffun: dolfinx.mesh.meshtags
+    ffun: dolfinx.mesh.MeshTags
     markers: dict[str, list[int]]
 
 
