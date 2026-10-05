@@ -24,6 +24,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Install scifem-build dependencies
+        run: python3 -m pip install --group build-scifem
+
       - name: Install dev dependencies on nightly
         if: ${{ matrix.container == 'ghcr.io/fenics/dolfinx/dolfinx:nightly' }}
         run: |
