@@ -28,10 +28,22 @@ import dolfinx
 # Generate an idealized BiV geometry
 geo = cardiac_geometries.mesh.biv_ellipsoid(outdir=geodir)
 # Generate fibers with 60/-60 fibers angles on the endo- and epicardium
-system = ldrb.dolfinx_ldrb(mesh=geo.mesh, ffun=geo.ffun, markers=geo.markers, alpha_endo_lv=60, alpha_epi_lv=-60, beta_endo_lv=0, beta_epi_lv=0, fiber_space="P_2")
+system = ldrb.dolfinx_ldrb(
+    mesh=geo.mesh,
+    ffun=geo.ffun,
+    markers=geo.markers,
+    alpha_endo_lv=60,
+    alpha_epi_lv=-60,
+    beta_endo_lv=0,
+    beta_epi_lv=0,
+    fiber_space="P_2",
+)
 # Visualize fibers in Paraview
 with dolfinx.io.VTXWriter(
-    geo.mesh.comm, outdir / f"microstructure-viz.bp", [system.f0, system.s0, system.n0], engine="BP4"
+    geo.mesh.comm,
+    outdir / f"microstructure-viz.bp",
+    [system.f0, system.s0, system.n0],
+    engine="BP4",
 ) as vtx:
     vtx.write(0.0)
 ```
