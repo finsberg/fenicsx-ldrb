@@ -32,7 +32,7 @@ def test_aha_biv_clipped(tmp_path: Path):
     aha = ldrb.aha.gernerate_aha_biv(
         mesh=geo.mesh,
         ffun=geo.ffun,
-        markers=cardiac_geometries.mesh.transform_markers(geo.markers, clipped=True),
+        markers=ldrb.ldrb.transform_markers(geo.markers),
         function_space="DG_0",
         base_max=0.748,
         mid_base=0.71,
@@ -64,7 +64,7 @@ def test_aha_biv_full(tmp_path: Path):
     aha = ldrb.aha.gernerate_aha_biv(
         mesh=geo.mesh,
         ffun=geo.ffun,
-        markers=cardiac_geometries.mesh.transform_markers(geo.markers, clipped=False),
+        markers=ldrb.ldrb.transform_markers(geo.markers),
         function_space="DG_0",
         base_max=0.748,
         mid_base=0.71,
