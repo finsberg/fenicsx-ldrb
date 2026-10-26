@@ -398,6 +398,9 @@ def dolfinx_ldrb(
     f0 = array_to_function(Vv, system.f0, "f0")
     s0 = array_to_function(Vv, system.s0, "s0")
     n0 = array_to_function(Vv, system.n0, "n0")
+    # Only the owned dofs are computed above
+    for f in (f0, s0, n0, markers_fun):
+        f.x.scatter_forward()
     return io.LDRBOutput(
         f0=f0,
         s0=s0,
