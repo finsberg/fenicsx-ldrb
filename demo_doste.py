@@ -114,6 +114,8 @@ doste = ldrb.dolfinx_doste(
 V = doste.w_lv.function_space
 w = dolfinx.fem.Function(V)
 in_lv = doste.markers_scalar.x.array == 1
+assert isinstance(doste.w_lv, dolfinx.fem.Function)
+assert isinstance(doste.w_rv, dolfinx.fem.Function)
 w.x.array[:] = np.where(in_lv, doste.w_lv.x.array, doste.w_rv.x.array)
 
 grid = pyvista.UnstructuredGrid(*dolfinx.plot.vtk_mesh(V))
@@ -139,12 +141,12 @@ def fiber_glyphs(f0, factor=4.0):
 
 
 mesh_grid = pyvista.UnstructuredGrid(*vtk_mesh)
-plotter = pyvista.Plotter(shape=(1, 2), window_size=[1600, 800])
+plotter = pyvista.Plotter(shape=(1, 2), window_size=[1200, 600])
 for column, (title, system) in enumerate([("Bayer et al.", bayer), ("Doste et al.", doste)]):
     plotter.subplot(0, column)
     plotter.add_text(title, font_size=12)
     plotter.add_mesh(mesh_grid, color="white")
-    plotter.add_mesh(fiber_glyphs(system.f0), color="firebrick", line_width=3)
+    plotter.add_mesh(fiber_glyphs(system.f0), color="firebrick", line_width=3)  # type: ignore[attr-defined]
 plotter.link_views()
 if not pyvista.OFF_SCREEN:
     plotter.show()
