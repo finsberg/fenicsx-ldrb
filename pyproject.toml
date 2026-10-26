@@ -44,6 +44,7 @@ pypi = [
 ]
 demos = [
    "cardiac-geometriesx",
+   "ukb-atlas>=2.0",
 ]
 docs = [
    "jupyter-book<2.0",
