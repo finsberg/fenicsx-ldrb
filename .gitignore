@@ -94,3 +94,7 @@ ENV/
 
 # pytest
 .pytest_cache/
+
+# Output of demo_doste.py
+/ukb/
+/ukb_*.png
