@@ -26,7 +26,7 @@ def test_cli_ukb_full(tmp_path):
     comm = MPI.COMM_WORLD
     geodir = comm.bcast(tmp_path / "lv", root=0)
 
-    cardiac_geometries.mesh.ukb(outdir=geodir, comm=comm)
+    cardiac_geometries.mesh.ukb(outdir=geodir, comm=comm, create_fibers=False)
     outdir = comm.bcast(tmp_path / "out", root=0)
     args = [
         str(geodir / "mesh.xdmf"),
@@ -43,7 +43,7 @@ def test_cli_ukb_clipped(tmp_path):
     comm = MPI.COMM_WORLD
     geodir = comm.bcast(tmp_path / "lv", root=0)
 
-    cardiac_geometries.mesh.ukb(outdir=geodir, comm=comm, clipped=True)
+    cardiac_geometries.mesh.ukb(outdir=geodir, comm=comm, clipped=True, create_fibers=False)
     outdir = comm.bcast(tmp_path / "out", root=0)
     args = [
         str(geodir / "mesh.xdmf"),

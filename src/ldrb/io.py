@@ -36,6 +36,21 @@ class LDRBOutput(NamedTuple):
     markers_scalar: dolfinx.fem.Function | None = None
 
 
+class DosteOutput(NamedTuple):
+    f0: dolfinx.fem.Function
+    s0: dolfinx.fem.Function
+    n0: dolfinx.fem.Function
+    markers_scalar: dolfinx.fem.Function
+    phi: dolfinx.fem.Function
+    psi_lv_basal: dolfinx.fem.Function
+    psi_lv_ot: dolfinx.fem.Function
+    w_lv: dolfinx.fem.Function
+    lv_rv: dolfinx.fem.Function | None = None
+    psi_rv_basal: dolfinx.fem.Function | None = None
+    psi_rv_ot: dolfinx.fem.Function | None = None
+    w_rv: dolfinx.fem.Function | None = None
+
+
 class FiberSheetSystem(NamedTuple):
     f0: np.ndarray
     s0: np.ndarray

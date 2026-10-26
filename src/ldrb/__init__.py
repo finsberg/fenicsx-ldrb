@@ -1,6 +1,7 @@
 from importlib.metadata import metadata
 
-from . import aha, calculus, io, ldrb, utils
+from . import aha, calculus, doste, io, ldrb, utils
+from .doste import dolfinx_doste
 from .ldrb import dolfinx_ldrb, project_gradients, scalar_laplacians
 from .utils import space_from_string
 
@@ -15,6 +16,8 @@ __program_name__ = meta["Name"]
 __all__ = [
     "ldrb",
     "dolfinx_ldrb",
+    "dolfinx_doste",
+    "doste",
     "scalar_laplacians",
     "project_gradients",
     "utils",

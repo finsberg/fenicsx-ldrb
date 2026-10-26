@@ -184,7 +184,21 @@ def dofs_from_function_space(mesh: dolfinx.mesh.Mesh, fiber_space: str) -> np.nd
 
 def transform_markers(markers: dict[str, list[int]]) -> dict[str, list[int]]:
     """Convert markers generated with gmsh to format for ldrb"""
-    if "ENDO_LV" in markers:
+    if "LV_ENDO" in markers:
+        # UKB atlas from ukb-atlas >= 2.0
+        epi = [markers["EPI"][0]]
+        if "RV_SEPTUM" in markers:
+            # The LV-only geometries are closed on the RV side by the RV septum
+            epi.append(markers["RV_SEPTUM"][0])
+        if "BASE" in markers:
+            base = [markers["BASE"][0]]
+        else:
+            base = [markers[valve][0] for valve in ("MV", "AV", "TV", "PV") if valve in markers]
+        transformed = dict(lv=[markers["LV_ENDO"][0]], epi=epi, base=base)
+        if "RV_ENDO" in markers:
+            transformed["rv"] = [markers["RV_ENDO"][0]]
+        return transformed
+    elif "ENDO_LV" in markers:
         return dict(
             lv=[markers["ENDO_LV"][0]],
             rv=[markers["ENDO_RV"][0]],
@@ -384,6 +398,9 @@ def dolfinx_ldrb(
     f0 = array_to_function(Vv, system.f0, "f0")
     s0 = array_to_function(Vv, system.s0, "s0")
     n0 = array_to_function(Vv, system.n0, "n0")
+    # Only the owned dofs are computed above
+    for f in (f0, s0, n0, markers_fun):
+        f.x.scatter_forward()
     return io.LDRBOutput(
         f0=f0,
         s0=s0,
