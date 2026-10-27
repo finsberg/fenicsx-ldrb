@@ -8,6 +8,7 @@ from typing import Sequence
 from mpi4py import MPI
 
 import dolfinx
+import io4dolfinx
 
 from . import io, ldrb
 
@@ -26,7 +27,14 @@ def get_parser() -> argparse.ArgumentParser:
         )
     )
 
-    parser.add_argument("mesh_file", type=Path, help="Path to mesh file")
+    parser.add_argument(
+        "mesh_file",
+        type=Path,
+        help=(
+            "Path to mesh file, either an XDMF file (.xdmf) or a file written by io4dolfinx (.bp). "
+            "Use the latter for meshes of order higher than 2, which XDMF does not support."
+        ),
+    )
     parser.add_argument("-fo", "--full-output", action="store_true", help="Output all fields")
     parser.add_argument("-o", "--output", type=Path, default="output", help="Output file")
     parser.add_argument("-mn", "--mesh-name", type=str, default="Mesh", help="Name of the mesh")
@@ -86,6 +94,15 @@ def parse_geometry(
             # Read facet tags
             mesh.topology.create_connectivity(2, 3)
             facet_tags = xdmf.read_meshtags(mesh, name=facet_tags_name)
+    elif mesh_file.suffix == ".bp":
+        mesh = io4dolfinx.read_mesh(comm=MPI.COMM_WORLD, filename=mesh_file)
+        facet_tags = io4dolfinx.read_meshtags(
+            mesh=mesh, meshtag_name=facet_tags_name, filename=mesh_file
+        )
+    else:
+        raise ValueError(
+            f"Unsupported mesh file {mesh_file}, expected an XDMF (.xdmf) or io4dolfinx (.bp) file"
+        )
 
     if markers_file is not None:
         markers = json.loads(markers_file.read_text())
