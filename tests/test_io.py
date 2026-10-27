@@ -40,3 +40,19 @@ def test_save_load(tmp_path, space1, space2):
 
     assert np.allclose(loaded_functions["u"].x.array, u.x.array)
     assert np.allclose(loaded_functions["v"].x.array, v.x.array)
+
+
+def test_save_load_without_mesh(tmp_path):
+    mesh = dolfinx.mesh.create_unit_cube(comm=MPI.COMM_WORLD, nx=4, ny=4, nz=4)
+    V = ldrb.utils.space_from_string("P_1", mesh=mesh, dim=3)
+    u = dolfinx.fem.Function(V, name="u")
+    u.interpolate(lambda x: np.vstack([x[0], x[1] ** 2, np.sin(x[2])]))
+
+    filename = mesh.comm.bcast(tmp_path / "test_save_load_without_mesh.bp", root=0)
+    ldrb.io.save(comm=mesh.comm, filename=filename, functions=[u])
+    # The mesh is read from the file, so its numbering differs from the mesh above
+    loaded = ldrb.io.load(comm=mesh.comm, filename=filename)["u"]
+
+    expected = dolfinx.fem.Function(loaded.function_space)
+    expected.interpolate(lambda x: np.vstack([x[0], x[1] ** 2, np.sin(x[2])]))
+    assert np.allclose(loaded.x.array, expected.x.array)
