@@ -2,6 +2,7 @@ import inspect
 
 from mpi4py import MPI
 
+import io4dolfinx
 import pytest
 
 import cardiac_geometries
@@ -60,8 +61,9 @@ def test_cli_ukb_clipped(tmp_path):
     assert (outdir / "microstructure.bp").exists()
 
 
+@pytest.mark.parametrize("suffix", [".bp", ".h5"])
 @pytest.mark.parametrize("order", [1, 2, 3])
-def test_cli_biv_bp(tmp_path, order):
+def test_cli_biv_io4dolfinx(tmp_path, order, suffix):
     if "order" not in inspect.signature(cardiac_geometries.mesh.biv_ellipsoid).parameters:
         if order > 1:
             pytest.skip("cardiac-geometriesx does not support meshes of higher order")
@@ -71,10 +73,20 @@ def test_cli_biv_bp(tmp_path, order):
     comm = MPI.COMM_WORLD
     geodir = comm.bcast(tmp_path / "lv", root=0)
 
-    cardiac_geometries.mesh.biv_ellipsoid(outdir=geodir, comm=comm, **kwargs)
+    geo = cardiac_geometries.mesh.biv_ellipsoid(outdir=geodir, comm=comm, **kwargs)
+    mesh_file = geodir / f"mesh{suffix}"
+    backend = ldrb.cli.IO4DOLFINX_BACKENDS[suffix]
+    io4dolfinx.write_mesh(filename=mesh_file, mesh=geo.mesh, backend=backend)
+    io4dolfinx.write_meshtags(
+        filename=mesh_file,
+        mesh=geo.mesh,
+        meshtags=geo.ffun,
+        meshtag_name="Facet tags",
+        backend=backend,
+    )
     outdir = comm.bcast(tmp_path / "out", root=0)
     args = [
-        str(geodir / "geometry.bp"),
+        str(mesh_file),
         "--markers-file",
         str(geodir / "markers.json"),
         "-o",

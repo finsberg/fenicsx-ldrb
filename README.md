@@ -65,7 +65,7 @@ Note that you can achieve the the same results using the command line interface
 ldrb mesh.xdmf --markers-file markers.json --fiber-space P_2 --alpha-endo-lv 60 --alpha-epi-lv -60 --beta-endo-lv 0 --beta-epi-lv 0
 ```
 Note that if you don't specify a different angle for the RV or Septum, then the same angle as the LV will be used.
-The mesh file can be an XDMF file (`.xdmf`) or a file written by [io4dolfinx](https://github.com/scientificcomputing/io4dolfinx) (`.bp`), e.g. the `geometry.bp` written by [cardiac-geometriesx](https://github.com/ComputationalPhysiology/cardiac-geometriesx). Use the latter for meshes of order higher than 2, which XDMF does not support
+The mesh file can be an XDMF file (`.xdmf`) or a file written by [io4dolfinx](https://github.com/scientificcomputing/io4dolfinx) with the adios2 (`.bp`) or h5py (`.h5`) backend, e.g. the `geometry.bp` written by [cardiac-geometriesx](https://github.com/ComputationalPhysiology/cardiac-geometriesx). Use the latter for meshes of order higher than 2, which XDMF does not support
 ```
 ldrb geometry.bp --markers-file markers.json
 ```

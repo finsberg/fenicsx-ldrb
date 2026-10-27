@@ -12,6 +12,9 @@ import io4dolfinx
 
 from . import io, ldrb
 
+# The io4dolfinx backend used to read each type of file
+IO4DOLFINX_BACKENDS = {".bp": "adios2", ".h5": "h5py"}
+
 
 @dataclass
 class Geometry:
@@ -31,8 +34,9 @@ def get_parser() -> argparse.ArgumentParser:
         "mesh_file",
         type=Path,
         help=(
-            "Path to mesh file, either an XDMF file (.xdmf) or a file written by io4dolfinx (.bp). "
-            "Use the latter for meshes of order higher than 2, which XDMF does not support."
+            "Path to mesh file, either an XDMF file (.xdmf) or a file written by io4dolfinx with "
+            "the adios2 (.bp) or h5py (.h5) backend. Use the latter for meshes of order higher "
+            "than 2, which XDMF does not support."
         ),
     )
     parser.add_argument("-fo", "--full-output", action="store_true", help="Output all fields")
@@ -94,14 +98,16 @@ def parse_geometry(
             # Read facet tags
             mesh.topology.create_connectivity(2, 3)
             facet_tags = xdmf.read_meshtags(mesh, name=facet_tags_name)
-    elif mesh_file.suffix == ".bp":
-        mesh = io4dolfinx.read_mesh(comm=MPI.COMM_WORLD, filename=mesh_file)
+    elif mesh_file.suffix in IO4DOLFINX_BACKENDS:
+        backend = IO4DOLFINX_BACKENDS[mesh_file.suffix]
+        mesh = io4dolfinx.read_mesh(comm=MPI.COMM_WORLD, filename=mesh_file, backend=backend)
         facet_tags = io4dolfinx.read_meshtags(
-            mesh=mesh, meshtag_name=facet_tags_name, filename=mesh_file
+            mesh=mesh, meshtag_name=facet_tags_name, filename=mesh_file, backend=backend
         )
     else:
         raise ValueError(
-            f"Unsupported mesh file {mesh_file}, expected an XDMF (.xdmf) or io4dolfinx (.bp) file"
+            f"Unsupported mesh file {mesh_file}, expected an XDMF (.xdmf) or "
+            "io4dolfinx (.bp or .h5) file"
         )
 
     if markers_file is not None:
