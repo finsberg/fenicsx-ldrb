@@ -77,7 +77,7 @@ def save(
     for i, f in enumerate(functions):
         name = f.name
         if i == 0:
-            io4dolfinx.write_mesh(mesh=f.function_space.mesh, filename=filename)
+            io4dolfinx.write_mesh_input_order(mesh=f.function_space.mesh, filename=filename)
         io4dolfinx.write_function_on_input_mesh(u=f, filename=filename)
         attributes[name] = utils.element2array(f.ufl_element())
 
