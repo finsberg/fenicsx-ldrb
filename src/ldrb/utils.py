@@ -1,5 +1,7 @@
 from enum import Enum
-from typing import Iterable
+from typing import Iterable, Sequence
+
+from mpi4py import MPI
 
 import basix
 import dolfinx
@@ -60,6 +62,32 @@ def space_from_string(
     """
     el = parse_element(space_string, mesh, dim)
     return dolfinx.fem.functionspace(mesh, el)
+
+
+def geometry_degree(mesh: dolfinx.mesh.Mesh) -> int:
+    """The degree of the coordinate element of the mesh"""
+    domain = mesh.ufl_domain()
+    assert domain is not None
+    return int(domain.ufl_coordinate_element().degree)
+
+
+def laplace_space(mesh: dolfinx.mesh.Mesh) -> dolfinx.fem.FunctionSpace:
+    """The space in which the Laplace problems are solved: Lagrange elements of the
+    same degree as the geometry, so that the solutions are as accurate as the geometry.
+    """
+    return dolfinx.fem.functionspace(mesh, ("Lagrange", geometry_degree(mesh)))
+
+
+def closest_dofs(V: dolfinx.fem.FunctionSpace, point: Sequence[float] | np.ndarray) -> np.ndarray:
+    """The local (owned and ghost) dofs at the dof coordinate closest to `point`."""
+    comm = V.mesh.comm
+    coords = V.tabulate_dof_coordinates()
+    distance = np.linalg.norm(coords - np.asarray(point), axis=1)
+    local = (float(distance.min()), comm.rank) if len(distance) > 0 else (np.inf, comm.rank)
+    _, owner = comm.allreduce(local, op=MPI.MINLOC)
+    closest = coords[distance.argmin()] if comm.rank == owner else None
+    closest = comm.bcast(closest, root=owner)
+    return np.flatnonzero(np.all(coords == closest, axis=1)).astype(np.int32)
 
 
 def element2array(el: basix.ufl._BlockedElement) -> np.ndarray:

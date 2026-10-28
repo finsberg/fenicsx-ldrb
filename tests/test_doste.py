@@ -14,12 +14,24 @@ else:
     HAS_UKB = True
 
 
-def ukb_geometry(tmpdir_factory, geometry: str):
+def ukb_geometry(tmpdir_factory, geometry: str, order: int = 1):
     comm = MPI.COMM_WORLD
     outdir = comm.bcast(tmpdir_factory.mktemp(geometry), root=0)
     if comm.rank == 0:
-        ukb.cli.main(["surf", str(outdir), "--geometry", geometry])
-        ukb.cli.main(["mesh", str(outdir), "--char_length_max", "8", "--char_length_min", "8"])
+        surf_args = ["--refine", "1"] if order > 1 else []
+        ukb.cli.main(["surf", str(outdir), "--geometry", geometry, *surf_args])
+        ukb.cli.main(
+            [
+                "mesh",
+                str(outdir),
+                "--char_length_max",
+                "8",
+                "--char_length_min",
+                "8",
+                "--order",
+                str(order),
+            ]
+        )
     comm.barrier()
     geo = cardiac_geometries.utils.gmsh2dolfin(comm=comm, msh_file=outdir / "ED.msh")
     if "LV_ENDO" not in geo.markers:
@@ -27,11 +39,9 @@ def ukb_geometry(tmpdir_factory, geometry: str):
     return geo
 
 
-@pytest.fixture(scope="session")
-def biv_geometry(tmpdir_factory):
-    geo = ukb_geometry(tmpdir_factory, "biv")
+def biv_markers(geo):
     m = {name: value[0] for name, value in geo.markers.items()}
-    markers = {
+    return {
         "lv": m["LV_ENDO"],
         "rv": m["RV_ENDO"],
         "epi": m["EPI"],
@@ -40,7 +50,18 @@ def biv_geometry(tmpdir_factory):
         "tv": m["TV"],
         "pv": m["PV"],
     }
-    return geo, markers
+
+
+@pytest.fixture(scope="session")
+def biv_geometry(tmpdir_factory):
+    geo = ukb_geometry(tmpdir_factory, "biv")
+    return geo, biv_markers(geo)
+
+
+@pytest.fixture(scope="session")
+def biv_geometry_order2(tmpdir_factory):
+    geo = ukb_geometry(tmpdir_factory, "biv", order=2)
+    return geo, biv_markers(geo)
 
 
 @pytest.fixture(scope="session")
@@ -268,3 +289,16 @@ def test_lv_only(lv_geometry):
     f0 = owned_vectors(system.f0)
     assert np.allclose(np.linalg.norm(f0, axis=1), 1)
     assert np.all(system.markers_scalar.x.array == 1)
+
+
+@pytest.mark.skipif(not HAS_UKB, reason="ukb-atlas is not installed")
+@pytest.mark.parametrize("fiber_space", ["P_1", "P_2"])
+def test_biv_higher_order(biv_geometry_order2, fiber_space):
+    geo, markers = biv_geometry_order2
+    system = ldrb.dolfinx_doste(geo.mesh, geo.ffun, markers, fiber_space=fiber_space)
+    assert system.phi.function_space.element.basix_element.degree == 2
+    f0, s0, n0 = (owned_vectors(f) for f in (system.f0, system.s0, system.n0))
+    assert np.allclose(np.linalg.norm(f0, axis=1), 1)
+    assert np.allclose(np.linalg.norm(s0, axis=1), 1)
+    assert np.allclose(np.sum(f0 * s0, axis=1), 0)
+    assert np.allclose(n0, np.cross(f0, s0))
