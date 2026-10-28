@@ -450,7 +450,7 @@ def apex_to_base(
     # Find apex by solving a laplacian with base solution = 0
     # Create Base variational problem
 
-    V = dolfinx.fem.functionspace(mesh, ("Lagrange", 1))
+    V = utils.laplace_space(mesh)
 
     u = ufl.TrialFunction(V)
     v = ufl.TestFunction(V)
@@ -492,18 +492,9 @@ def apex_to_base(
     global_max, *apex_coord = mesh.comm.allreduce((local_max_val, *local_apex_coord), op=MPI.MAX)
     logger.info("  Apex coord: ({0:.2f}, {1:.2f}, {2:.2f})".format(*apex_coord))
 
-    apex_points = dolfinx.mesh.locate_entities_boundary(
-        mesh,
-        0,
-        lambda x: (
-            np.isclose(x[2], apex_coord[2])
-            & np.isclose(x[1], apex_coord[1])
-            & np.isclose(x[2], apex_coord[2])
-        ),
-    )
-
     zero = dolfinx.fem.Constant(mesh, dolfinx.default_scalar_type(0.0))
-    apex_dofs = dolfinx.fem.locate_dofs_topological(V, 0, apex_points)
+    # The apex may be any dof of the space, e.g. a node on an edge for higher order spaces
+    apex_dofs = utils.closest_dofs(V, apex_coord)
     apex_bc = dolfinx.fem.dirichletbc(zero, apex_dofs, V)
 
     base_facets = np.hstack([ffun.find(marker) for marker in base_marker])
@@ -600,7 +591,8 @@ def scalar_laplacians(
     petsc_options: dict[str, Any] | None = None,
 ) -> dict[str, dolfinx.fem.Function]:
     """
-    Calculate the laplacians
+    Calculate the laplacians. The problems are solved with Lagrange
+    elements of the same degree as the geometry.
 
     Arguments
     ---------

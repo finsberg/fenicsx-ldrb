@@ -27,9 +27,9 @@ Tracker = "https://github.com/finsberg/fenicsx-ldrb/issues"
 test = [
     "pytest",
     "pytest-cov",
-    "cardiac-geometriesx",
+    "cardiac-geometriesx>=0.16.0",
     "scifem",
-    "ukb-atlas",
+    "ukb-atlas>=2.1.0",
     "pyvista",
 ]
 dev = [
@@ -43,8 +43,8 @@ pypi = [
     "build"
 ]
 demos = [
-   "cardiac-geometriesx",
-   "ukb-atlas>=2.0",
+   "cardiac-geometriesx>=0.16.0",
+   "ukb-atlas>=2.1.0",
 ]
 docs = [
    "jupyter-book<2.0",

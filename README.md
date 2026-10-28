@@ -70,6 +70,9 @@ The mesh file can be an XDMF file (`.xdmf`) or a file written by [io4dolfinx](ht
 ldrb geometry.bp --markers-file markers.json
 ```
 
+### Higher order meshes
+Both methods work on meshes of any order. The Laplace problems are solved with Lagrange elements of the same degree as the geometry, so with a curved, higher order mesh the scalar fields, and hence the fibers, are as accurate as the geometry. The fibers can still be represented in any space with `fiber_space`, e.g. `P_2` for a quadratic mesh.
+
 ### Geometries with outflow tracts
 For biventricular geometries that include the outflow tracts and the four valves, such as the [UK Biobank atlas](https://github.com/ComputationalPhysiology/ukb-atlas), you can use the rule-based method of [Doste et al. (2019)](https://doi.org/10.1002/cnm.3185). With `ldrb.dolfinx_ldrb` the four valves have to be marked together as the base, so there is one longitudinal direction from the apex to the base. `ldrb.dolfinx_doste` needs each valve as a separate marker. In each ventricle it blends the direction from the apex to the inflow valve (mitral or tricuspid) with the direction from the apex to the outflow valve (aortic or pulmonary), and it uses separate fiber angles in the LV, the RV and the outflow tracts
 ```python
