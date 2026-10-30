@@ -121,18 +121,6 @@ def find_apex(
     return np.asarray(comm.bcast(apex, root=owner), dtype=np.float64)
 
 
-def _closest_dofs(V: dolfinx.fem.FunctionSpace, point: Sequence[float] | np.ndarray) -> np.ndarray:
-    """The local (owned and ghost) dofs at the dof coordinate closest to `point`."""
-    comm = V.mesh.comm
-    coords = V.tabulate_dof_coordinates()
-    distance = np.linalg.norm(coords - np.asarray(point), axis=1)
-    local = (float(distance.min()), comm.rank) if len(distance) > 0 else (np.inf, comm.rank)
-    _, owner = comm.allreduce(local, op=MPI.MINLOC)
-    closest = coords[distance.argmin()] if comm.rank == owner else None
-    closest = comm.bcast(closest, root=owner)
-    return np.flatnonzero(np.all(coords == closest, axis=1)).astype(np.int32)
-
-
 def _solve_laplace(
     V: dolfinx.fem.FunctionSpace,
     conditions: list[tuple[np.ndarray, float]],
@@ -178,7 +166,8 @@ def scalar_laplacians(
     apex_rv: Sequence[float] | np.ndarray | None = None,
     petsc_options: dict[str, Any] | None = None,
 ) -> dict[str, dolfinx.fem.Function]:
-    """Solve the Laplace problems of the method.
+    """Solve the Laplace problems of the method, with Lagrange elements of the
+    same degree as the geometry.
 
     Returns the transmural solution ``phi`` (-2 on the LV endocardium, 1 on
     the RV endocardium and 0 on the epicardium), and for each ventricle (``lv``
@@ -193,7 +182,7 @@ def scalar_laplacians(
     if petsc_options is None:
         petsc_options = default_petsc_options()
 
-    V = dolfinx.fem.functionspace(mesh, ("Lagrange", 1))
+    V = utils.laplace_space(mesh)
     fdim = mesh.topology.dim - 1
     mesh.topology.create_connectivity(fdim, mesh.topology.dim)
 
@@ -213,7 +202,7 @@ def scalar_laplacians(
             V, [(dofs("lv"), 1.0), (dofs("rv"), 0.0)], petsc_options, "lv_rv"
         )
     for ventricle, (inflow, outflow, apex) in ventricles.items():
-        apex_dofs = _closest_dofs(V, apex)
+        apex_dofs = utils.closest_dofs(V, apex)
         inflow_dofs = dofs(inflow)
         outflow_dofs = dofs(outflow)
         solutions[f"psi_{ventricle}_basal"] = _solve_laplace(

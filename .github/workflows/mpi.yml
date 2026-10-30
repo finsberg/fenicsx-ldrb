@@ -19,6 +19,9 @@ jobs:
       - name: Install scifem-build dependencies
         run: python3 -m pip install --group build-scifem
 
+      - name: Install h5py with MPI support
+        run: HDF5_MPI=ON HDF5_PKGCONFIG_NAME="hdf5" python3 -m pip install h5py --no-build-isolation --no-binary=h5py
+
       - name: Install package
         run: python3 -m pip install .[test]
 
