@@ -16,6 +16,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Install scifem-build dependencies
+        run: python3 -m pip install --group build-scifem
+
       - name: Install package
         run: python3 -m pip install .[test]
 

@@ -28,10 +28,22 @@ import dolfinx
 # Generate an idealized BiV geometry
 geo = cardiac_geometries.mesh.biv_ellipsoid(outdir=geodir)
 # Generate fibers with 60/-60 fibers angles on the endo- and epicardium
-system = ldrb.dolfinx_ldrb(mesh=geo.mesh, ffun=geo.ffun, markers=geo.markers, alpha_endo_lv=60, alpha_epi_lv=-60, beta_endo_lv=0, beta_epi_lv=0, fiber_space="P_2")
+system = ldrb.dolfinx_ldrb(
+    mesh=geo.mesh,
+    ffun=geo.ffun,
+    markers=geo.markers,
+    alpha_endo_lv=60,
+    alpha_epi_lv=-60,
+    beta_endo_lv=0,
+    beta_epi_lv=0,
+    fiber_space="P_2",
+)
 # Visualize fibers in Paraview
 with dolfinx.io.VTXWriter(
-    geo.mesh.comm, outdir / f"microstructure-viz.bp", [system.f0, system.s0, system.n0], engine="BP4"
+    geo.mesh.comm,
+    outdir / f"microstructure-viz.bp",
+    [system.f0, system.s0, system.n0],
+    engine="BP4",
 ) as vtx:
     vtx.write(0.0)
 ```
@@ -43,6 +55,18 @@ Note that you can achieve the the same results using the command line interface
 ldrb mesh.xdmf --markers-file markers.json --fiber-space P_2 --alpha-endo-lv 60 --alpha-epi-lv -60 --beta-endo-lv 0 --beta-epi-lv 0
 ```
 Note that if you don't specify a different angle for the RV or Septum, then the same angle as the LV will be used.
+
+### Geometries with outflow tracts
+For biventricular geometries that include the outflow tracts and the four valves, such as the [UK Biobank atlas](https://github.com/ComputationalPhysiology/ukb-atlas), you can use the rule-based method of [Doste et al. (2019)](https://doi.org/10.1002/cnm.3185). It defines the longitudinal direction in each ventricle as a blend of the directions from the apex to the inflow and to the outflow valve, and uses separate angles in the LV, RV and outflow tracts
+```python
+system = ldrb.dolfinx_doste(
+    mesh=geo.mesh,
+    ffun=geo.ffun,
+    markers={"lv": 1, "rv": 2, "epi": 3, "mv": 4, "av": 5, "tv": 6, "pv": 7},
+    fiber_space="P_2",
+)
+```
+The apex of each ventricle is the point on its endocardium farthest from the inflow valve, unless you pass its coordinates with `apex_lv` and `apex_rv`. The default angles are the ones from the paper, see `ldrb.doste` for the convention.
 
 ## Installation
 ## pip

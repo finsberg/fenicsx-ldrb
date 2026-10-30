@@ -12,6 +12,9 @@ FEniCSx-LDRB
 .. automodule:: ldrb.cli
     :members:
 
+.. automodule:: ldrb.doste
+    :members:
+
 .. automodule:: ldrb.io
     :members:
 
