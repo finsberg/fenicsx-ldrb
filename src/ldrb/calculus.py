@@ -56,7 +56,8 @@ def slerp(q1: np.ndarray, q2: np.ndarray, t: float) -> np.ndarray:
         return a * q1 + b * q3
 
     # Angle is close to zero - do linear interpolation
-    return q1 * (1 - t) + q3 * t
+    # (normalized, since the result must be a unit quaternion)
+    return normalize(q1 * (1 - t) + q3 * t)
 
 
 @numba.njit(_float_1D_array(_float_2D_array))

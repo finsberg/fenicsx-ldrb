@@ -151,3 +151,24 @@ def test_lv_angles_alpha(alpha, data):
     assert norm(fib.f0 - f0) < tol
     assert norm(fib.s0 - s0) < tol
     assert norm(fib.n0 - n0) < tol
+
+
+@pytest.mark.parametrize("t", [0.0, 0.25, 0.5, 0.75, 1.0])
+def test_slerp_nearly_parallel_quaternions_gives_rotation(t):
+    # Regression test: when dot(q1, q2) >= 0.9999 slerp falls back to linear
+    # interpolation, which must still return a unit quaternion so that
+    # quat2rot yields an orthonormal matrix.
+    rng = np.random.default_rng(0)
+    for _ in range(200):
+        q1 = rng.normal(size=4)
+        q1 /= np.linalg.norm(q1)
+        d = rng.normal(size=4)
+        d -= (d @ q1) * q1
+        d /= np.linalg.norm(d)
+        theta = rng.uniform(0, 0.0141)
+        q2 = np.cos(theta) * q1 + np.sin(theta) * d
+
+        q = ldrb.calculus.slerp(q1, q2, t)
+        assert np.isclose(np.linalg.norm(q), 1.0, atol=tol, rtol=0)
+        R = ldrb.calculus.quat2rot(q)
+        assert np.allclose(R.T @ R, np.eye(3), atol=tol, rtol=0)
