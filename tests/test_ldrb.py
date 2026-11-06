@@ -64,6 +64,19 @@ def norm(v):
     return np.linalg.norm(v)
 
 
+def owned_vectors(f):
+    n = f.function_space.dofmap.index_map.size_local
+    return f.x.array[: 3 * n].reshape(-1, 3)
+
+
+def assert_orthonormal_fiber_system(system, atol=1e-10):
+    f0, s0, n0 = (owned_vectors(f) for f in (system.f0, system.s0, system.n0))
+    for v in (f0, s0, n0):
+        assert np.allclose(np.linalg.norm(v, axis=1), 1.0, atol=atol, rtol=0)
+    for u, v in ((f0, s0), (f0, n0), (s0, n0)):
+        assert np.allclose(np.sum(u * v, axis=1), 0.0, atol=atol, rtol=0)
+
+
 def test_scalar_laplacians():
     comm = MPI.COMM_WORLD
     mesh = dolfinx.mesh.create_unit_cube(comm, nx=2, ny=2, nz=2)
@@ -128,12 +141,13 @@ def test_apex_to_base(lv_geometry):
 
 @pytest.mark.parametrize("fiber_space", ["P_1", "P_2", "dP_0", "dP_1", "Q_1", "Q_2"])
 def test_lv_regression(lv_geometry, fiber_space):
-    ldrb.dolfinx_ldrb(
+    system = ldrb.dolfinx_ldrb(
         mesh=lv_geometry.mesh,
         ffun=lv_geometry.ffun,
         markers=lv_geometry.markers,
         fiber_space=fiber_space,
     )
+    assert_orthonormal_fiber_system(system)
 
 
 @pytest.mark.parametrize(
@@ -148,12 +162,13 @@ def test_lv_regression(lv_geometry, fiber_space):
     ],
 )
 def test_biv_regression(biv_geometry, fiber_space):
-    ldrb.dolfinx_ldrb(
+    system = ldrb.dolfinx_ldrb(
         mesh=biv_geometry.mesh,
         ffun=biv_geometry.ffun,
         markers=biv_geometry.markers,
         fiber_space=fiber_space,
     )
+    assert_orthonormal_fiber_system(system)
 
 
 def degree(f: dolfinx.fem.Function) -> int:
