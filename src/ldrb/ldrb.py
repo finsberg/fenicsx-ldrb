@@ -587,9 +587,9 @@ def _gradient(
         petsc_options={"ksp_type": "cg", "pc_type": "jacobi", "ksp_rtol": 1e-12},
         **kwargs,  # type: ignore[arg-type]
     )
-    f = problem.solve()
-    assert isinstance(f, dolfinx.fem.Function)
-    return f
+    f_proj = problem.solve()
+    assert isinstance(f_proj, dolfinx.fem.Function)
+    return f_proj
 
 
 def project_gradients(
