@@ -555,13 +555,51 @@ def apex_to_base(
     return apex
 
 
+def _gradient(
+    u: dolfinx.fem.Function,
+    Vv: dolfinx.fem.FunctionSpace,
+    points: np.ndarray,
+    continuous: bool,
+    name: str,
+) -> dolfinx.fem.Function:
+    """The gradient of u in Vv.
+
+    The gradient of a Lagrange function is discontinuous across cells. Interpolating it into a
+    continuous space takes the value of one arbitrary neighbouring cell at each shared node, which
+    depends on the cell order and the MPI partition. For continuous spaces we therefore use the L2
+    projection. Discontinuous and quadrature spaces have their points inside the cells, where the
+    gradient is well defined, so they keep interpolation.
+    """
+    if not continuous:
+        f = dolfinx.fem.Function(Vv)
+        f.interpolate(dolfinx.fem.Expression(ufl.grad(u), points))
+        return f
+
+    w = ufl.TrialFunction(Vv)
+    v = ufl.TestFunction(Vv)
+    kwargs = {}
+    if _dolfinx_version >= Version("0.10"):
+        kwargs["petsc_options_prefix"] = f"ldrb_gradient_{name}"
+    problem = LinearProblem(  # type: ignore[call-overload]
+        ufl.inner(w, v) * ufl.dx,
+        ufl.inner(ufl.grad(u), v) * ufl.dx,
+        bcs=[],
+        petsc_options={"ksp_type": "cg", "pc_type": "jacobi", "ksp_rtol": 1e-12},
+        **kwargs,  # type: ignore[arg-type]
+    )
+    f_proj = problem.solve()
+    assert isinstance(f_proj, dolfinx.fem.Function)
+    return f_proj
+
+
 def project_gradients(
     mesh: dolfinx.mesh.Mesh,
     scalar_solutions: dict[str, dolfinx.fem.Function],
     fiber_space: str = "P_1",
 ) -> tuple[dict[str, np.ndarray], dict[str, dolfinx.fem.Function]]:
     """
-    Calculate the gradients using projections
+    Calculate the gradients: the L2 projection for continuous fiber spaces,
+    interpolation for discontinuous and quadrature spaces (see `_gradient`)
 
     Arguments
     ---------
@@ -584,14 +622,13 @@ def project_gradients(
         V_points = V.element.interpolation_points()
         Vv_points = Vv.element.interpolation_points()
 
+    continuous = fiber_space.split("_")[0] in ("Lagrange", "P", "CG")
     output = {}
     data = {}
     for case, scalar_solution in scalar_solutions.items():
         output[case] = scalar_solution
         if case != "lv_rv":
-            grad_expr = dolfinx.fem.Expression(ufl.grad(scalar_solution), Vv_points)
-            f = dolfinx.fem.Function(Vv)
-            f.interpolate(grad_expr)
+            f = _gradient(scalar_solution, Vv, Vv_points, continuous, case)
 
             # Add gradient data
             data[case + "_gradient"] = f.x.array
