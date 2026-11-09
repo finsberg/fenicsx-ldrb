@@ -555,28 +555,12 @@ def apex_to_base(
     return apex
 
 
-def _gradient(
-    u: dolfinx.fem.Function,
-    Vv: dolfinx.fem.FunctionSpace,
-    points: np.ndarray,
-    continuous: bool,
-    name: str,
+def _project_gradient(
+    u: dolfinx.fem.Function, Vc: dolfinx.fem.FunctionSpace, name: str
 ) -> dolfinx.fem.Function:
-    """The gradient of u in Vv.
-
-    The gradient of a Lagrange function is discontinuous across cells. Interpolating it into a
-    continuous space takes the value of one arbitrary neighbouring cell at each shared node, which
-    depends on the cell order and the MPI partition. For continuous spaces we therefore use the L2
-    projection. Discontinuous and quadrature spaces have their points inside the cells, where the
-    gradient is well defined, so they keep interpolation.
-    """
-    if not continuous:
-        f = dolfinx.fem.Function(Vv)
-        f.interpolate(dolfinx.fem.Expression(ufl.grad(u), points))
-        return f
-
-    w = ufl.TrialFunction(Vv)
-    v = ufl.TestFunction(Vv)
+    """The L2 projection of grad(u) into the continuous vector space Vc."""
+    w = ufl.TrialFunction(Vc)
+    v = ufl.TestFunction(Vc)
     kwargs = {}
     if _dolfinx_version >= Version("0.10"):
         kwargs["petsc_options_prefix"] = f"ldrb_gradient_{name}"
@@ -592,14 +576,41 @@ def _gradient(
     return f_proj
 
 
+def _gradient(
+    u: dolfinx.fem.Function,
+    Vv: dolfinx.fem.FunctionSpace,
+    points: np.ndarray,
+    name: str,
+) -> dolfinx.fem.Function:
+    """The gradient of u in Vv, from its L2 projection into the vector space of u.
+
+    The gradient of a Lagrange function is discontinuous across cells and, inside a cell, only as
+    accurate as the cell-wise gradient (constant for P1). Interpolating it directly into a
+    continuous space takes the value of one arbitrary neighbouring cell at each shared node, which
+    depends on the cell order and the MPI partition; at points inside the cells it keeps the
+    cell-wise error. We therefore L2-project it into the continuous vector Lagrange space of the
+    same degree as u, which is smoother, more accurate and independent of the partition, and
+    evaluate that at the points of Vv. Projecting into a higher-degree Vv instead would cost more
+    without adding information, since the accuracy is set by u.
+    """
+    degree = u.function_space.element.basix_element.degree
+    Vc = dolfinx.fem.functionspace(Vv.mesh, ("Lagrange", degree, (3,)))
+    g = _project_gradient(u, Vc, name)
+    if Vv.ufl_element() == Vc.ufl_element():
+        return g
+    f = dolfinx.fem.Function(Vv)
+    f.interpolate(dolfinx.fem.Expression(g, points))
+    return f
+
+
 def project_gradients(
     mesh: dolfinx.mesh.Mesh,
     scalar_solutions: dict[str, dolfinx.fem.Function],
     fiber_space: str = "P_1",
 ) -> tuple[dict[str, np.ndarray], dict[str, dolfinx.fem.Function]]:
     """
-    Calculate the gradients: the L2 projection for continuous fiber spaces,
-    interpolation for discontinuous and quadrature spaces (see `_gradient`)
+    Calculate the gradients from their L2 projection into the continuous vector space of
+    the scalar solutions, evaluated in the fiber space (see `_gradient`)
 
     Arguments
     ---------
@@ -622,13 +633,12 @@ def project_gradients(
         V_points = V.element.interpolation_points()
         Vv_points = Vv.element.interpolation_points()
 
-    continuous = fiber_space.split("_")[0] in ("Lagrange", "P", "CG")
     output = {}
     data = {}
     for case, scalar_solution in scalar_solutions.items():
         output[case] = scalar_solution
         if case != "lv_rv":
-            f = _gradient(scalar_solution, Vv, Vv_points, continuous, case)
+            f = _gradient(scalar_solution, Vv, Vv_points, case)
 
             # Add gradient data
             data[case + "_gradient"] = f.x.array
