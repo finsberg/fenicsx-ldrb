@@ -308,3 +308,41 @@ def test_slab_with_apex_surface_matches_bayer_closed_form(slab_geometry):
     expected = np.cos(alpha)[:, None] * e0 + np.sin(alpha)[:, None] * e1
     f0 = owned_vectors(system.f0)
     assert np.allclose(np.abs(np.sum(f0 * expected, axis=1)), 1.0, atol=1e-8)
+
+
+@pytest.fixture(scope="session")
+def cylinder_geometry(tmpdir_factory):
+    """Open cylinder from r = 10 (endo) to r = 15 (epi).
+
+    phi_epi = ln(r / 10) / ln(1.5), so grad phi_epi is parallel to e_r.
+    """
+    comm = MPI.COMM_WORLD
+    outdir = comm.bcast(tmpdir_factory.mktemp("cylinder"), root=0)
+    geo = cardiac_geometries.mesh.cylinder(outdir=outdir, char_length=2.5, comm=comm)
+    geo.markers.update(
+        {
+            "lv": [geo.markers["INSIDE"][0]],
+            "epi": [geo.markers["OUTSIDE"][0]],
+            "base": [geo.markers["TOP"][0]],
+            "apex": [geo.markers["BOTTOM"][0]],
+        }
+    )
+    return geo
+
+
+def test_transmural_gradient_is_projected(cylinder_geometry):
+    # Interpolating the cell-wise gradient into a continuous space takes the value of one
+    # arbitrary neighbouring cell at each node, which depends on the cell order and the MPI
+    # partition (mean error about 5 degrees here). The L2 projection does not (about 1 degree).
+    geo = cylinder_geometry
+    markers = {k: geo.markers[k] for k in ("lv", "epi", "base", "apex")}
+    system = ldrb.dolfinx_ldrb(mesh=geo.mesh, ffun=geo.ffun, markers=markers, fiber_space="P_1")
+    g = owned_vectors(system.epi_gradient)
+    n = len(g)
+    x = system.epi_gradient.function_space.tabulate_dof_coordinates()[:n]
+    e_r = np.c_[x[:, 0], x[:, 1], np.zeros(n)] / np.hypot(x[:, 0], x[:, 1])[:, None]
+    cos = np.abs(np.sum(g * e_r, axis=1)) / np.linalg.norm(g, axis=1)
+    angle = np.degrees(np.arccos(np.minimum(cos, 1.0)))
+    comm = geo.mesh.comm
+    mean = comm.allreduce(angle.sum(), op=MPI.SUM) / comm.allreduce(n, op=MPI.SUM)
+    assert mean < 1.5
