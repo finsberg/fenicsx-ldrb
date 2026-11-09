@@ -272,7 +272,9 @@ def slab_geometry(tmpdir_factory):
 
 def test_apex_to_base_with_apex_surface(slab_geometry):
     geo = slab_geometry
-    apex = ldrb.ldrb.apex_to_base(geo.mesh, geo.markers["base"], geo.ffun, apex_marker=geo.markers["apex"])
+    apex = ldrb.ldrb.apex_to_base(
+        geo.mesh, geo.markers["base"], geo.ffun, apex_marker=geo.markers["apex"]
+    )
     z = apex.function_space.tabulate_dof_coordinates()[:, 2]
     # Dirichlet 0 on the whole apex face and 1 on the base face: the exact solution is z / 3
     assert np.allclose(apex.x.array, z / 3.0, atol=1e-10)
@@ -296,7 +298,8 @@ def test_slab_with_apex_surface_matches_bayer_closed_form(slab_geometry):
     # Exact LDRB inputs on the slab: phi_epi = y / 7, apicobasal e1 = +z, transmural e2 = +y,
     # circumferential e0 = e1 x e2 = -x. Without an RV, Algorithm 1 of Bayer et al. (2012) gives
     # F = bislerp(Q_lv(alpha_endo), Q_epi(alpha_w(t)), t), a rotation about e2 by
-    # alpha(t) = alpha_endo + t * (alpha_w(t) - alpha_endo), alpha_w(t) = alpha_endo (1 - t) + alpha_epi t.
+    # alpha(t) = alpha_endo + t * (alpha_w(t) - alpha_endo),
+    # with alpha_w(t) = alpha_endo (1 - t) + alpha_epi t.
     n = system.f0.function_space.dofmap.index_map.size_local
     x = system.f0.function_space.tabulate_dof_coordinates()[:n]
     t = x[:, 1] / 7.0
