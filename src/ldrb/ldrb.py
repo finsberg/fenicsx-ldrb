@@ -286,7 +286,9 @@ def dolfinx_ldrb(
         different boundaries defined in the facet function
         or within the mesh itself.
         The following markers must be provided:
-        'base', 'lv', 'epi, 'rv' (optional).
+        'base', 'lv', 'epi, 'rv' (optional), 'apex' (optional).
+        If 'apex' is given, those facets are the apex in the apex to base
+        problem; otherwise the apex is the point farthest from the base.
         If the markers are not provided the following default
         vales will be used: base = 10, rv = 20, lv = 30, epi = 40
     save_markers: bool
@@ -419,39 +421,16 @@ def array_to_function(
     return f
 
 
-def apex_to_base(
+def _apex_point_dofs(
     mesh: dolfinx.mesh.Mesh,
+    V: dolfinx.fem.FunctionSpace,
     base_marker: list[int],
     ffun: dolfinx.mesh.MeshTags,
-    petsc_options: dict[str, Any] | None = None,
-) -> dolfinx.fem.Function:
-    """
-    Find the apex coordinate and compute the laplace
-    equation to find the apex to base solution
-
-    Arguments
-    ---------
-    mesh : dolfin.Mesh
-        The mesh
-    base_marker : int
-        The marker value for the basal facets
-    ffun : dolfin.MeshFunctionSizet (optional)
-        A facet function containing markers for the boundaries.
-        If not provided, the markers stored within the mesh will
-        be used.
-    petsc_options : dict (optional)
-        A dictionary with petsc options to pass to the linear solvers.
-        This can be used to set the linear solver and preconditioner.
-        If not provided, the default options will be used, which are
-        ksp_type = preonly and pc_type = lu.
-    """
-    if petsc_options is None:
-        petsc_options = default_petsc_options()
+    petsc_options: dict[str, Any],
+) -> np.ndarray:
+    """The dofs at the apex point: the point farthest from the base."""
     # Find apex by solving a laplacian with base solution = 0
     # Create Base variational problem
-
-    V = utils.laplace_space(mesh)
-
     u = ufl.TrialFunction(V)
     v = ufl.TestFunction(V)
     a = ufl.dot(ufl.grad(u), ufl.grad(v)) * ufl.dx
@@ -492,9 +471,55 @@ def apex_to_base(
     global_max, *apex_coord = mesh.comm.allreduce((local_max_val, *local_apex_coord), op=MPI.MAX)
     logger.info("  Apex coord: ({0:.2f}, {1:.2f}, {2:.2f})".format(*apex_coord))
 
-    zero = dolfinx.fem.Constant(mesh, dolfinx.default_scalar_type(0.0))
     # The apex may be any dof of the space, e.g. a node on an edge for higher order spaces
-    apex_dofs = utils.closest_dofs(V, apex_coord)
+    return utils.closest_dofs(V, apex_coord)
+
+
+def apex_to_base(
+    mesh: dolfinx.mesh.Mesh,
+    base_marker: list[int],
+    ffun: dolfinx.mesh.MeshTags,
+    petsc_options: dict[str, Any] | None = None,
+    apex_marker: list[int] | None = None,
+) -> dolfinx.fem.Function:
+    """
+    Compute the apex to base solution: the Laplace equation with 0 at the
+    apex and 1 on the base.
+
+    By default the apex is a single point, found as the point farthest from
+    the base. If `apex_marker` is given, the facets with those markers are the
+    apex instead (Bayer et al. 2012 define the apex as a surface). Use this for
+    geometries without a natural apex point, such as a slab or a cylinder.
+
+    Arguments
+    ---------
+    mesh : dolfin.Mesh
+        The mesh
+    base_marker : int
+        The marker value for the basal facets
+    ffun : dolfin.MeshFunctionSizet (optional)
+        A facet function containing markers for the boundaries.
+        If not provided, the markers stored within the mesh will
+        be used.
+    petsc_options : dict (optional)
+        A dictionary with petsc options to pass to the linear solvers.
+        This can be used to set the linear solver and preconditioner.
+        If not provided, the default options will be used, which are
+        ksp_type = preonly and pc_type = lu.
+    apex_marker : list[int] (optional)
+        The marker values for the apical facets. If not provided, the apex
+        is the point farthest from the base.
+    """
+    if petsc_options is None:
+        petsc_options = default_petsc_options()
+    V = utils.laplace_space(mesh)
+    zero = dolfinx.fem.Constant(mesh, dolfinx.default_scalar_type(0.0))
+    if apex_marker is None:
+        apex_dofs = _apex_point_dofs(mesh, V, base_marker, ffun, petsc_options)
+    else:
+        apex_facets = np.hstack([ffun.find(marker) for marker in apex_marker])
+        mesh.topology.create_connectivity(2, 3)
+        apex_dofs = dolfinx.fem.locate_dofs_topological(V, 2, apex_facets)
     apex_bc = dolfinx.fem.dirichletbc(zero, apex_dofs, V)
 
     base_facets = np.hstack([ffun.find(marker) for marker in base_marker])
@@ -603,7 +628,9 @@ def scalar_laplacians(
         different boundaries defined in the facet function
         or within the mesh itself.
         The following markers must be provided:
-        'base', 'lv', 'epi, 'rv' (optional).
+        'base', 'lv', 'epi, 'rv' (optional), 'apex' (optional).
+        If 'apex' is given, those facets are the apex in the apex to base
+        problem; otherwise the apex is the point farthest from the base.
         If the markers are not provided the following default
         vales will be used: base = 10, rv = 20, lv = 30, epi = 40.
     ffun : dolfin.MeshFunctionSizet (optional)
@@ -646,7 +673,9 @@ def scalar_laplacians(
     logger.info("  Num cells: {0}".format(num_cells))
 
     solutions: dict[str, dolfinx.fem.Function] = {}
-    apex = apex_to_base(mesh, markers["base"], ffun, petsc_options=petsc_options)
+    apex = apex_to_base(
+        mesh, markers["base"], ffun, petsc_options=petsc_options, apex_marker=markers.get("apex")
+    )
     V = apex.function_space
     u = ufl.TrialFunction(V)
     v = ufl.TestFunction(V)
@@ -754,7 +783,7 @@ def find_cases_and_boundaries(
     markers: dict[str, list[int]],
 ) -> tuple[list[str], list[str]]:
     potential_cases = {"rv", "lv", "epi"}
-    potential_boundaries = potential_cases | {"base", "mv", "av"}
+    potential_boundaries = potential_cases | {"base", "mv", "av", "apex"}
 
     cases = []
     boundaries = []

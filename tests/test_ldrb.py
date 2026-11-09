@@ -251,3 +251,60 @@ def test_biv_higher_order(tmpdir_factory, fiber_space):
     assert np.allclose(np.linalg.norm(f0, axis=1), 1)
     assert np.allclose(np.linalg.norm(s0, axis=1), 1)
     assert np.allclose(np.sum(f0 * s0, axis=1), 0)
+
+
+@pytest.fixture(scope="session")
+def slab_geometry(tmpdir_factory):
+    """A 20 x 7 x 3 slab: endo at y = 0, epi at y = 7, apex face z = 0, base face z = 3."""
+    comm = MPI.COMM_WORLD
+    outdir = comm.bcast(tmpdir_factory.mktemp("slab"), root=0)
+    geo = cardiac_geometries.mesh.slab(outdir=outdir, comm=comm, create_fibers=False)
+    geo.markers.update(
+        {
+            "lv": [geo.markers["Y0"][0]],
+            "epi": [geo.markers["Y1"][0]],
+            "base": [geo.markers["Z1"][0]],
+            "apex": [geo.markers["Z0"][0]],
+        }
+    )
+    return geo
+
+
+def test_apex_to_base_with_apex_surface(slab_geometry):
+    geo = slab_geometry
+    apex = ldrb.ldrb.apex_to_base(
+        geo.mesh, geo.markers["base"], geo.ffun, apex_marker=geo.markers["apex"]
+    )
+    z = apex.function_space.tabulate_dof_coordinates()[:, 2]
+    # Dirichlet 0 on the whole apex face and 1 on the base face: the exact solution is z / 3
+    assert np.allclose(apex.x.array, z / 3.0, atol=1e-10)
+
+
+def test_slab_with_apex_surface_matches_bayer_closed_form(slab_geometry):
+    geo = slab_geometry
+    alpha_endo, alpha_epi = 30.0, -30.0
+    markers = {k: geo.markers[k] for k in ("lv", "epi", "base", "apex")}
+    system = ldrb.dolfinx_ldrb(
+        mesh=geo.mesh,
+        ffun=geo.ffun,
+        markers=markers,
+        alpha_endo_lv=alpha_endo,
+        alpha_epi_lv=alpha_epi,
+        beta_endo_lv=0.0,
+        beta_epi_lv=0.0,
+    )
+    assert_orthonormal_fiber_system(system)
+
+    # Exact LDRB inputs on the slab: phi_epi = y / 7, apicobasal e1 = +z, transmural e2 = +y,
+    # circumferential e0 = e1 x e2 = -x. Without an RV, Algorithm 1 of Bayer et al. (2012) gives
+    # F = bislerp(Q_lv(alpha_endo), Q_epi(alpha_w(t)), t), a rotation about e2 by
+    # alpha(t) = alpha_endo + t * (alpha_w(t) - alpha_endo),
+    # with alpha_w(t) = alpha_endo (1 - t) + alpha_epi t.
+    n = system.f0.function_space.dofmap.index_map.size_local
+    x = system.f0.function_space.tabulate_dof_coordinates()[:n]
+    t = x[:, 1] / 7.0
+    alpha = np.radians(alpha_endo + t * (alpha_endo * (1 - t) + alpha_epi * t - alpha_endo))
+    e0, e1 = np.array([-1.0, 0.0, 0.0]), np.array([0.0, 0.0, 1.0])
+    expected = np.cos(alpha)[:, None] * e0 + np.sin(alpha)[:, None] * e1
+    f0 = owned_vectors(system.f0)
+    assert np.allclose(np.abs(np.sum(f0 * expected, axis=1)), 1.0, atol=1e-8)
