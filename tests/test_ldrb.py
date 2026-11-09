@@ -346,3 +346,30 @@ def test_transmural_gradient_is_projected(cylinder_geometry):
     comm = geo.mesh.comm
     mean = comm.allreduce(angle.sum(), op=MPI.SUM) / comm.allreduce(n, op=MPI.SUM)
     assert mean < 1.5
+
+
+@pytest.mark.parametrize("fiber_space", ["Quadrature_2", "DG_1", "P_2"])
+def test_gradient_is_projected_into_laplace_space(cylinder_geometry, fiber_space):
+    # Inside the cells the gradient of the P1 Laplace solution is only cell-wise constant (about
+    # 3-5 degrees off here), and projecting it into P_2 adds cost but no information. Evaluating
+    # its L2 projection into P1 at the points of the fiber space is about 3 times as accurate.
+    geo = cylinder_geometry
+    markers = {k: geo.markers[k] for k in ("lv", "epi", "base", "apex")}
+    system = ldrb.dolfinx_ldrb(
+        mesh=geo.mesh, ffun=geo.ffun, markers=markers, fiber_space=fiber_space
+    )
+    grad = system.epi_gradient
+    V = grad.function_space
+    points = V.element.interpolation_points
+    points = points() if callable(points) else points
+    ncells = geo.mesh.topology.index_map(3).size_local
+    cells = np.arange(ncells, dtype=np.int32)
+    x = dolfinx.fem.Expression(ufl.SpatialCoordinate(geo.mesh), points).eval(geo.mesh, cells)
+    g = dolfinx.fem.Expression(grad, points).eval(geo.mesh, cells)
+    x, g = x.reshape(-1, 3), g.reshape(-1, 3)
+    e_r = np.c_[x[:, 0], x[:, 1], np.zeros(len(x))] / np.hypot(x[:, 0], x[:, 1])[:, None]
+    cos = np.abs(np.sum(g * e_r, axis=1)) / np.linalg.norm(g, axis=1)
+    angle = np.degrees(np.arccos(np.minimum(cos, 1.0)))
+    comm = geo.mesh.comm
+    mean = comm.allreduce(angle.sum(), op=MPI.SUM) / comm.allreduce(len(angle), op=MPI.SUM)
+    assert mean < 1.0  # 0.4.1: 1.5-4.6 degrees
