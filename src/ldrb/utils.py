@@ -79,15 +79,25 @@ def laplace_space(mesh: dolfinx.mesh.Mesh) -> dolfinx.fem.FunctionSpace:
 
 
 def closest_dofs(V: dolfinx.fem.FunctionSpace, point: Sequence[float] | np.ndarray) -> np.ndarray:
-    """The local (owned and ghost) dofs at the dof coordinate closest to `point`."""
+    """The local (owned and ghost) dofs of the node closest to `point`.
+
+    The node is chosen among the owned nodes of all processes and identified by its global
+    index, so every process that has it, as owned or ghost, returns it. Matching by coordinates
+    would miss ghost copies, whose tabulated coordinates can differ in the last bits.
+    """
     comm = V.mesh.comm
+    index_map = V.dofmap.index_map
     coords = V.tabulate_dof_coordinates()
-    distance = np.linalg.norm(coords - np.asarray(point), axis=1)
+    distance = np.linalg.norm(coords[: index_map.size_local] - np.asarray(point), axis=1)
     local = (float(distance.min()), comm.rank) if len(distance) > 0 else (np.inf, comm.rank)
     _, owner = comm.allreduce(local, op=MPI.MINLOC)
-    closest = coords[distance.argmin()] if comm.rank == owner else None
+    closest = None
+    if comm.rank == owner:
+        closest = int(index_map.local_to_global(np.array([distance.argmin()], dtype=np.int32))[0])
     closest = comm.bcast(closest, root=owner)
-    return np.flatnonzero(np.all(coords == closest, axis=1)).astype(np.int32)
+    num_local = index_map.size_local + index_map.num_ghosts
+    local_to_global = index_map.local_to_global(np.arange(num_local, dtype=np.int32))
+    return np.flatnonzero(local_to_global == closest).astype(np.int32)
 
 
 def element2array(el: basix.ufl._BlockedElement) -> np.ndarray:
