@@ -373,3 +373,31 @@ def test_gradient_is_projected_into_laplace_space(cylinder_geometry, fiber_space
     comm = geo.mesh.comm
     mean = comm.allreduce(angle.sum(), op=MPI.SUM) / comm.allreduce(len(angle), op=MPI.SUM)
     assert mean < 1.0  # 0.4.1: 1.5-4.6 degrees
+
+
+def test_transform_markers_base_and_valves():
+    # A patient BiV with a basal cap (BASE) and the four valves: the base is all of them
+    markers = {
+        "LV_ENDO": [1, 2],
+        "RV_ENDO": [2, 2],
+        "EPI": [3, 2],
+        "BASE": [4, 2],
+        "MV": [5, 2],
+        "AV": [6, 2],
+        "TV": [7, 2],
+        "PV": [8, 2],
+    }
+    assert ldrb.ldrb.transform_markers(markers)["base"] == [4, 5, 6, 7, 8]
+
+
+@pytest.mark.parametrize(
+    "markers, base",
+    [
+        # UKB with outflow tracts: the valves only
+        ({"LV_ENDO": [1, 2], "EPI": [3, 2], "MV": [5, 2], "AV": [6, 2]}, [5, 6]),
+        # UKB clipped: BASE only
+        ({"LV_ENDO": [1, 2], "EPI": [3, 2], "BASE": [4, 2]}, [4]),
+    ],
+)
+def test_transform_markers_ukb_unchanged(markers, base):
+    assert ldrb.ldrb.transform_markers(markers)["base"] == base
