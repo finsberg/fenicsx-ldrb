@@ -50,11 +50,15 @@ from packaging.version import Version
 from . import io, utils
 from .calculus import axis, normalize
 from .ldrb import (
+    TIMER_FRAMES,
+    TIMER_GRADIENTS,
+    TIMER_LAPLACE,
     array_to_function,
     default_petsc_options,
     dofs_from_function_space,
     process_markers,
     project_gradients,
+    solve_with_exact_bcs,
 )
 
 _dolfinx_version = Version(dolfinx.__version__)
@@ -152,7 +156,7 @@ def _solve_laplace(
         petsc_options=petsc_options,
         **kwargs,  # type: ignore[arg-type]
     )
-    uh = problem.solve()
+    uh = solve_with_exact_bcs(problem, bcs)
     assert isinstance(uh, dolfinx.fem.Function)
     uh.name = name
     return uh
@@ -396,8 +400,9 @@ def dolfinx_doste(
         outflow tracts.
     petsc_options : dict (optional)
         A dictionary with petsc options to pass to the linear solvers.
-        If not provided, the default options will be used, which are
-        ksp_type = preonly and pc_type = lu.
+        If not provided, :func:`ldrb.ldrb.default_petsc_options` is used (conjugate gradients
+        with algebraic multigrid). The stages are timed with the same dolfinx timers as
+        :func:`ldrb.dolfinx_ldrb`.
     """
     processed_markers = process_markers(markers)
     required = ["lv", "epi", "mv", "av"]
@@ -422,17 +427,19 @@ def dolfinx_doste(
         logger.info(f"RV apex: {rv_apex}")
 
     logger.info("Calculating scalar fields")
-    solutions = scalar_laplacians(
-        mesh=mesh,
-        ffun=ffun,
-        markers=processed_markers,
-        apex_lv=lv_apex,
-        apex_rv=rv_apex,
-        petsc_options=petsc_options,
-    )
+    with dolfinx.common.Timer(TIMER_LAPLACE):
+        solutions = scalar_laplacians(
+            mesh=mesh,
+            ffun=ffun,
+            markers=processed_markers,
+            apex_lv=lv_apex,
+            apex_rv=rv_apex,
+            petsc_options=petsc_options,
+        )
 
     logger.info("Calculating gradients")
-    data, _ = project_gradients(mesh=mesh, scalar_solutions=solutions, fiber_space=fiber_space)
+    with dolfinx.common.Timer(TIMER_GRADIENTS):
+        data, _ = project_gradients(mesh=mesh, scalar_solutions=solutions, fiber_space=fiber_space)
     if not has_rv:
         for name in ["lv_rv_scalar", "w_rv_scalar", "psi_rv_basal_gradient", "psi_rv_ot_gradient"]:
             reference = "w_lv_scalar" if name.endswith("scalar") else "psi_lv_basal_gradient"
@@ -457,27 +464,28 @@ def dolfinx_doste(
     s0 = np.zeros_like(f0)
     n0 = np.zeros_like(f0)
     marker_scalar = np.zeros_like(data["phi_scalar"])
-    compute_fiber_sheet_system(
-        f0,
-        s0,
-        n0,
-        marker_scalar,
-        dofs[:, 0],
-        dofs[:, 1],
-        dofs[:, 2],
-        dofs[:, 3],
-        data["phi_scalar"],
-        data["phi_gradient"],
-        data["lv_rv_scalar"],
-        data["w_lv_scalar"],
-        data["psi_lv_basal_gradient"],
-        data["psi_lv_ot_gradient"],
-        data["w_rv_scalar"],
-        data["psi_rv_basal_gradient"],
-        data["psi_rv_ot_gradient"],
-        angles,
-        has_rv,
-    )
+    with dolfinx.common.Timer(TIMER_FRAMES):
+        compute_fiber_sheet_system(
+            f0,
+            s0,
+            n0,
+            marker_scalar,
+            dofs[:, 0],
+            dofs[:, 1],
+            dofs[:, 2],
+            dofs[:, 3],
+            data["phi_scalar"],
+            data["phi_gradient"],
+            data["lv_rv_scalar"],
+            data["w_lv_scalar"],
+            data["psi_lv_basal_gradient"],
+            data["psi_lv_ot_gradient"],
+            data["w_rv_scalar"],
+            data["psi_rv_basal_gradient"],
+            data["psi_rv_ot_gradient"],
+            angles,
+            has_rv,
+        )
 
     Vv = utils.space_from_string(fiber_space, mesh, dim=3)
     V = utils.space_from_string(fiber_space, mesh, dim=1)
