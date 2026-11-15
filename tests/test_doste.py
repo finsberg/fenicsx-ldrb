@@ -77,6 +77,15 @@ def lv_geometry(tmpdir_factory):
     return geo, markers
 
 
+def timer_count(name):
+    import dolfinx
+
+    try:
+        return dolfinx.common.timing(name)[0]
+    except RuntimeError:  # never started
+        return 0
+
+
 def owned_vectors(f):
     n = f.function_space.dofmap.index_map.size_local
     return f.x.array[: 3 * n].reshape(-1, 3)
@@ -268,6 +277,42 @@ def test_biv_agrees_with_bayer_away_from_the_outflow_tracts(biv_geometry):
     rv = np.concatenate(comm.allgather(diff[(marker == 2) & (w_rv > 0.9)]))
     assert np.median(lv) < 15
     assert np.median(rv) < 15
+
+
+@pytest.mark.skipif(not HAS_UKB, reason="ukb-atlas is not installed")
+def test_boundary_values_are_exact_with_the_iterative_solver(biv_geometry):
+    # The epicardium is recognised by phi == 0 (to 1e-10), so the Dirichlet values must be exact,
+    # not only to the tolerance of the iterative solver
+    import dolfinx
+
+    geo, markers = biv_geometry
+    out = ldrb.dolfinx_doste(geo.mesh, geo.ffun, markers)
+    V = out.phi.function_space
+    facets = geo.ffun.find(markers["epi"])
+    dofs = dolfinx.fem.locate_dofs_topological(V, 2, facets)
+    assert np.all(out.phi.x.array[dofs] == 0.0)
+
+
+@pytest.mark.skipif(not HAS_UKB, reason="ukb-atlas is not installed")
+def test_biv_default_solver_matches_lu_and_records_timers(biv_geometry):
+    geo, markers = biv_geometry
+    stages = ("ldrb: Laplace solves", "ldrb: gradients", "ldrb: frames")
+    before = [timer_count(name) for name in stages]
+    default = ldrb.dolfinx_doste(geo.mesh, geo.ffun, markers)
+    after = [timer_count(name) for name in stages]
+    assert [b - a for a, b in zip(before, after)] == [1, 1, 1]
+    lu = ldrb.dolfinx_doste(
+        geo.mesh,
+        geo.ffun,
+        markers,
+        petsc_options={
+            "ksp_type": "preonly",
+            "pc_type": "lu",
+            "pc_factor_mat_solver_type": "mumps",
+        },
+    )
+    diff = angle(owned_vectors(default.f0), owned_vectors(lu.f0))
+    assert geo.mesh.comm.allreduce(float(diff.max(initial=0.0)), op=MPI.MAX) < 1e-3
 
 
 @pytest.mark.skipif(not HAS_UKB, reason="ukb-atlas is not installed")

@@ -18,8 +18,35 @@ _dolfinx_version = Version(dolfinx.__version__)
 logger = logging.getLogger(__name__)
 
 
+# Names of the dolfinx timers around the stages of dolfinx_ldrb and dolfinx_doste
+# (see dolfinx.common.timing and dolfinx.common.list_timings)
+TIMER_LAPLACE = "ldrb: Laplace solves"
+TIMER_GRADIENTS = "ldrb: gradients"
+TIMER_FRAMES = "ldrb: frames"
+
+
 def default_petsc_options() -> dict[str, Any]:
-    return {"ksp_type": "preonly", "pc_type": "lu"}
+    """Conjugate gradients with algebraic multigrid (PETSc's GAMG) for the Laplace problems.
+
+    Faster than a direct solver, in serial (PETSc's own LU) and in parallel (MUMPS), with the
+    same fibers to well below 0.001 degrees. A solve that does not converge raises an error.
+    """
+    return {
+        "ksp_type": "cg",
+        "pc_type": "gamg",
+        "ksp_rtol": 1e-10,
+        "ksp_error_if_not_converged": True,
+    }
+
+
+def solve_with_exact_bcs(problem: LinearProblem, bcs: list) -> dolfinx.fem.Function:
+    """Solve, then set the Dirichlet values exactly: an iterative solver meets them only to its
+    tolerance, and the fiber methods compare boundary values exactly (e.g. Doste's phi == 0)."""
+    uh = problem.solve()
+    assert isinstance(uh, dolfinx.fem.Function)
+    for bc in bcs:
+        bc.set(uh.x.array)
+    return uh
 
 
 def standard_dofs(n: int) -> np.ndarray:
@@ -342,8 +369,11 @@ def dolfinx_ldrb(
     petsc_options : dict (optional)
         A dictionary with petsc options to pass to the linear solvers.
         This can be used to set the linear solver and preconditioner.
-        If not provided, the default options will be used, which are
-        ksp_type = preonly and pc_type = lu.
+        If not provided, :func:`default_petsc_options` is used (conjugate gradients with
+        algebraic multigrid). Pass ``{"ksp_type": "preonly", "pc_type": "lu"}`` for a direct solver.
+
+    The stages are timed with the dolfinx timers ``TIMER_LAPLACE``, ``TIMER_GRADIENTS`` and
+    ``TIMER_FRAMES``.
     """
     # Print warning of unused arguments
     if kwargs:
@@ -356,41 +386,44 @@ def dolfinx_ldrb(
     if ffun is None:
         raise ValueError("ffun must be provided to compute LDRB fibers.")
 
-    scalar_solutions = scalar_laplacians(
-        mesh=mesh,
-        markers=processed_markers,
-        ffun=ffun,
-        petsc_options=petsc_options,
-    )
+    with dolfinx.common.Timer(TIMER_LAPLACE):
+        scalar_solutions = scalar_laplacians(
+            mesh=mesh,
+            markers=processed_markers,
+            ffun=ffun,
+            petsc_options=petsc_options,
+        )
 
     # Create gradients
     logger.info("\nCalculating gradients")
-    data, output = project_gradients(
-        mesh=mesh,
-        fiber_space=fiber_space,
-        scalar_solutions=scalar_solutions,
-    )
+    with dolfinx.common.Timer(TIMER_GRADIENTS):
+        data, output = project_gradients(
+            mesh=mesh,
+            fiber_space=fiber_space,
+            scalar_solutions=scalar_solutions,
+        )
 
     dofs = dofs_from_function_space(mesh, fiber_space)
     marker_scalar = np.zeros_like(data["lv_scalar"])
-    system = compute_fiber_sheet_system(
-        dofs=dofs,
-        marker_scalar=marker_scalar,
-        alpha_endo_lv=alpha_endo_lv,
-        alpha_epi_lv=alpha_epi_lv,
-        alpha_endo_rv=alpha_endo_rv,
-        alpha_epi_rv=alpha_epi_rv,
-        alpha_endo_sept=alpha_endo_sept,
-        alpha_epi_sept=alpha_epi_sept,
-        beta_endo_lv=beta_endo_lv,
-        beta_epi_lv=beta_epi_lv,
-        beta_endo_rv=beta_endo_rv,
-        beta_epi_rv=beta_epi_rv,
-        beta_endo_sept=beta_endo_sept,
-        beta_epi_sept=beta_epi_sept,
-        epi_only=epi_only,
-        **data,
-    )  # type:ignore
+    with dolfinx.common.Timer(TIMER_FRAMES):
+        system = compute_fiber_sheet_system(
+            dofs=dofs,
+            marker_scalar=marker_scalar,
+            alpha_endo_lv=alpha_endo_lv,
+            alpha_epi_lv=alpha_epi_lv,
+            alpha_endo_rv=alpha_endo_rv,
+            alpha_epi_rv=alpha_epi_rv,
+            alpha_endo_sept=alpha_endo_sept,
+            alpha_epi_sept=alpha_epi_sept,
+            beta_endo_lv=beta_endo_lv,
+            beta_epi_lv=beta_epi_lv,
+            beta_endo_rv=beta_endo_rv,
+            beta_epi_rv=beta_epi_rv,
+            beta_endo_sept=beta_endo_sept,
+            beta_epi_sept=beta_epi_sept,
+            epi_only=epi_only,
+            **data,
+        )  # type:ignore
 
     V = utils.space_from_string(fiber_space, mesh, dim=1)
     markers_fun = dolfinx.fem.Function(V)
@@ -455,7 +488,7 @@ def _apex_point_dofs(
         petsc_options=petsc_options,
         **kwargs,  # type: ignore[arg-type]
     )
-    uh = problem.solve()
+    uh = solve_with_exact_bcs(problem, bcs)
     assert isinstance(uh, dolfinx.fem.Function)
     # with dolfinx.io.XDMFFile(MPI.COMM_WORLD, "apex.xdmf", "w") as file:
     #     file.write_mesh(mesh)
@@ -545,7 +578,7 @@ def apex_to_base(
         petsc_options=petsc_options,
         **kwargs,  # type: ignore[arg-type]
     )
-    apex = problem.solve()
+    apex = solve_with_exact_bcs(problem, bcs)
     assert isinstance(apex, dolfinx.fem.Function)
 
     # with dolfinx.io.XDMFFile(mesh.comm, "apex_base.xdmf", "w") as file:
@@ -761,7 +794,7 @@ def scalar_laplacians(
             petsc_options=petsc_options,
             **kwargs,  # type: ignore[arg-type]
         )
-        uh = problem.solve()
+        uh = solve_with_exact_bcs(problem, bcs)
         assert isinstance(uh, dolfinx.fem.Function)
         solutions[case] = uh
 
@@ -793,7 +826,7 @@ def scalar_laplacians(
             petsc_options=petsc_options,
             **kwargs,  # type: ignore[arg-type]
         )
-        uh = problem.solve()
+        uh = solve_with_exact_bcs(problem, bcs)
         assert isinstance(uh, dolfinx.fem.Function)
         solutions["lv_rv"] = uh
 

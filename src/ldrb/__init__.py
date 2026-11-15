@@ -2,7 +2,7 @@ from importlib.metadata import metadata
 
 from . import aha, calculus, doste, io, ldrb, utils
 from .doste import dolfinx_doste
-from .ldrb import dolfinx_ldrb, project_gradients, scalar_laplacians
+from .ldrb import default_petsc_options, dolfinx_ldrb, project_gradients, scalar_laplacians
 from .utils import space_from_string
 
 meta = metadata("fenicsx-ldrb")
@@ -17,6 +17,7 @@ __all__ = [
     "ldrb",
     "dolfinx_ldrb",
     "dolfinx_doste",
+    "default_petsc_options",
     "doste",
     "scalar_laplacians",
     "project_gradients",
